@@ -1,4 +1,4 @@
-let FieldValidator = require.main.require ('./FieldValidator');
+let FieldValidator = require ('./FieldValidator');
 
 module.exports = class Validator
 {
