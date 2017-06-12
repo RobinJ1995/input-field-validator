@@ -1,6 +1,6 @@
 {
   "name": "input-field-validator",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Input field validator",
   "main": "Validator.js",
   "scripts": {
@@ -9,7 +9,7 @@
   "author": "Robin Jacobs",
   "license": "GPLv2",
   "repository": {
-    "type" : "git",
-    "url" : "https://github.com/RobinJ1995/input-field-validator.git"
+    "type": "git",
+    "url": "https://github.com/RobinJ1995/input-field-validator.git"
   }
 }
