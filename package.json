@@ -1,0 +1,11 @@
+{
+  "name": "input-field-validator",
+  "version": "1.0.0",
+  "description": "Input field validator",
+  "main": "Validator.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Robin Jacobs",
+  "license": "ISC"
+}
