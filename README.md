@@ -22,6 +22,9 @@ let validation = new Validator
 		tags: ['optional', 'array', 'minlength:3', 'maxlength:32']
 	}
 );
+
+if (! validation.validate ())
+	throw new Error (validator.errors.join (', '));
 ```
 
 ## Available validators
