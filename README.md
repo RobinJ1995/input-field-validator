@@ -24,7 +24,7 @@ let validation = new Validator
 );
 
 if (! validation.validate ())
-	throw new Error (validator.errors.join (', '));
+	throw new Error (validation.errors.join (', '));
 ```
 
 ## Available validators
