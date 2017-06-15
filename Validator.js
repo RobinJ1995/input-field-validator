@@ -6,6 +6,7 @@ module.exports = class Validator
 	{
 		this.valid = null;
 		this.errors = [];
+		this.fieldErrors = [];
 		
 		this.input = input;
 		this.rules = rules;
@@ -23,6 +24,13 @@ module.exports = class Validator
 			{
 				valid = false;
 				this.errors.push (fieldValidator.error);
+				this.fieldErrors.push
+				(
+					{
+						field: field,
+						error: fieldValidator.fieldError
+					}
+				);
 			}
 		}
 		
