@@ -1,6 +1,6 @@
 let FieldValidator = require ('./FieldValidator');
 
-module.exports = class Validator
+class Validator
 {
 	constructor (input, rules)
 	{
@@ -38,9 +38,7 @@ module.exports = class Validator
 		
 		return valid;
 	}
-	
-	static FieldValidator ()
-	{
-		return FieldValidator;
-	}
 }
+Validator.FieldValidator = FieldValidator;
+
+module.exports = Validator;
