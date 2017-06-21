@@ -8,6 +8,8 @@ class Validator
 		this.errors = [];
 		this.fieldErrors = [];
 		
+		this.reverse = false;
+		
 		this.input = input;
 		this.rules = rules;
 	}
@@ -20,7 +22,8 @@ class Validator
 		for (let field in this.rules)
 		{
 			let fieldValidator = new FieldValidator (field, this.input[field], this.rules[field], this.input);
-			if (! fieldValidator.validate ())
+			
+			if (! fieldValidator.validate () && ! this.reverse)
 			{
 				valid = false;
 				this.errors.push (fieldValidator.error);
@@ -29,6 +32,18 @@ class Validator
 					{
 						field: field,
 						error: fieldValidator.fieldError
+					}
+				);
+			}
+			else if (this.reverse && fieldValidator.validate ()) // This is pretty much just here for testing //
+			{
+				valid = false;
+				this.errors.push (field + ' is valid');
+				this.fieldErrors.push
+				(
+					{
+						field: field,
+						error: 'Is valid'
 					}
 				);
 			}

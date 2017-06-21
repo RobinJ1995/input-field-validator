@@ -56,65 +56,94 @@ module.exports = class FieldValidator
 			else if (this.rules.includes ('optional') && (this.value === null || this.value === undefined))
 				break; // Value is optional and not present //
 			
+			let value = this.value; // Let's make a copy to manipulate //
+			
 			switch (name)
 			{
 				case 'int':
 				case 'integer':
-					if (! Number.isInteger (this.value))
+					if (! (Number.isInteger (value) || ((value.constructor.name === 'String' && String (parseInt (value)) === value))))
 						return this.invalid (this.name, 'must be an integer');
 					
 					break;
 				case 'number':
-					if (isNaN (this.value))
+					if (value.constructor.name === 'String')
+					{
+						value = Number (value);
+						
+						if (String (value) !== this.value)
+							return this.invalid (this.name, 'must be a number');
+					}
+					
+					if (value.constructor.name !== 'Number' || isNaN (value))
 						return this.invalid (this.name, 'must be a number');
 					
 					break;
+				case 'string':
+					if (value.constructor.name !== 'String')
+						return this.invalid (this.name, 'must be a string');
+					
+					break;
 				case 'email':
-					if (! /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/i.test (this.value))
+					this.rules.push ('string');
+					if (! /^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/i.test (value))
 						return this.invalid (this.name, 'must be a valid e-mail address');
 					
 					break;
 				case 'url':
-					if (! /^https?:\/\/[a-z0-9$\-_\+\!\*\'\(\),]+.[a-z0-9$\-_\+\!\*\'\(\),\.]+(\/[^\s]+)?$/i.test (this.value))
+					this.rules.push ('string');
+					if (! /^https?:\/\/[a-z0-9$\-_\+\!\*\'\(\),]+.[a-z0-9$\-_\+\!\*\'\(\),\.]+\.[a-z0-9]+(\/[^\s]*)?$/i.test (value))
 						return this.invalid (this.name, 'must be a valid URL');
 					
 					break;
 				case 'length':
-					if (this.value.length !== parts[1])
+					if (value.constructor.name === 'Number')
+						value = String (value);
+					
+					if (value.length !== parseInt (parts[1]))
 						return this.invalid (this.name, 'must be ' + parts[1] + ' characters long');
 					
 					break;
 				case 'maxlength':
-					if (this.value.length > parts[1])
+					if (value.constructor.name === 'Number')
+						value = String (value);
+					
+					if (isNaN (value.length) || value.length > parseInt (parts[1]))
 						return this.invalid (this.name, 'must be no more than ' + parts[1] + ' characters long');
 					
 					break;
 				case 'minlength':
-					if (this.value.length < parts[1])
+					if (value.constructor.name === 'Number')
+						value = String (value);
+					
+					if (isNaN (value.length) || value.length < parseInt (parts[1]))
 						return this.invalid (this.name, 'must be at least ' + parts[1] + ' characters long');
 					
 					break;
 				case 'in':
 					let options = parts[1].split (',');
-					if (! options.includes (this.value))
+					if (['Number', 'Boolean'].includes (value.constructor.name))
+						value = String (value);
+					
+					if (! options.includes (value))
 						return this.invalid (this.name, 'must be one of the following values: ' + options.join (', '));
 					
 					break;
 				case 'same':
-				{
+				{ // to prevent otherFields from being hoisted up too far //
 					let otherFields = parts[1].split (',');
 					for (let otherField of otherFields)
 					{
-						if (this.input[otherField] !== this.value)
+						if (this.input[otherField] !== value)
 							return this.invalid (this.name, 'must be the same as ' + otherFields.join (', '));
 					}
 					
 					break;
 				}
 				case 'different':
-				{ // to prevent otherFields from being hoisted up too far //
+				{
 					let otherFields = parts[1].split (',');
-					let values = [this.value];
+					let values = [value];
 					for (let otherField of otherFields)
 					{
 						if (values.includes (this.input[otherField]))
@@ -125,21 +154,53 @@ module.exports = class FieldValidator
 					
 					break;
 				}
+				case 'required_with':
+					if (this.input[parts[1]] && (value === null || value === undefined || value === ''))
+						return this.invalid (this.name, 'is required with ' + parts[1]);
+					
+					break;
+				case 'required_if':
+					if ((this.input[parts[1]] == parts[2]) && (value === null || value === undefined || value === ''))
+						return this.invalid (this.name, 'is required if ' + parts[1] + ' is ' + parts[2]);
+					
+					break;
 				case 'lowercase':
-					if (this.value !== this.value.toLowerCase ())
+					this.rules.push ('string');
+					value = String (value);
+					if (value !== value.toLowerCase ())
 						return this.invalid (this.name, 'must be lower case');
 					
 					break;
 				case 'uppercase':
-					if (this.value !== this.value.toUpperCase ())
+					this.rules.push ('string');
+					value = String (value);
+					if (value !== value.toUpperCase ())
 						return this.invalid (this.name, 'must be upper case');
 					
 					break;
+				case 'alpha':
+					this.rules.push ('string');
+					if (! /^[\pL\pM]+$/u.test (value))
+						return this.invalid (this.name, 'must consist of alphabetic characters');
+					
+					break;
+				case 'alpha_num':
+					this.rules.push ('string');
+					if (! /^[\pL\pM\pN]+$/u.test (value))
+						return this.invalid (this.name, 'must consist of alphanumeric characters');
+					
+					break;
+				case 'alpha_dash':
+					this.rules.push ('string');
+					if (! /^[\pL\pM\pN_-]+$/u.test (value))
+						return this.invalid (this.name, 'must consist of alphanumeric characters, dashes and underscores');
+					
+					break;
 				case 'date':
-					if (! /^(\d{1,4})\-((0?[1-9])|(1[0-2]))\-(([012]?[0-9])|(3[01]))$/.test (this.value))
+					if (! /^(\d{1,4})\-((0?[1-9])|(1[0-2]))\-(([012]?[0-9])|(3[01]))$/.test (value))
 						return this.invalid (this.name, 'must be a valid date');
 					
-					let date = new Date (this.value);
+					let date = new Date (value);
 					
 					if (parts[1])
 					{
@@ -168,13 +229,47 @@ module.exports = class FieldValidator
 					break;
 				case 'bool':
 				case 'boolean':
-					if (! [true, false, 0, 1, 'true', 'false', '0', '1'].includes (this.value))
+					if (! [true, false, 0, 1, 'true', 'false', '0', '1'].includes (value))
 						return this.invalid (this.name, 'must be a boolean value (true or false)');
 					
 					break;
+				case 'distinct':
+					let values = Object.values (this.input);
+					values = values.splice (values.indexOf (value), 1);
+					
+					if (values.includes (value))
+						return this.invalid (this.name, 'must contain a distinct value');
+					
+					break;
+				case 'ip':
+				case 'ipv4':
+					this.rules.push ('string');
+					if (! /^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test (value))
+						return this.invalid (this.name, 'must be a valid IP address');
+					
+					if (name == 'ipv4')
+						break;
+				case 'ipv6':
+					this.rules.push ('string');
+					if (! /^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))$/.test (value))
+						return this.invalid (this.name, 'must be a valid IP address');
+					
+					break;
+				case 'json':
+					this.rules.push ('string');
+					try
+					{
+						JSON.parse (value);
+					}
+					catch (e)
+					{
+						return this.invalid (this.name, 'must be valid JSON data');
+					}
+					break;
 				case 'regex':
+					this.rules.push ('string');
 					let regex = new RegExp (rule.substr (rule.split (':', 1)[0].length + 1));
-					if (! regex.test (this.value))
+					if (! regex.test (value))
 						return this.invalid (this.name, 'must match the following regular expression: ' + regex);
 					
 					break;
