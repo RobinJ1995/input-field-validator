@@ -197,7 +197,7 @@ module.exports = class FieldValidator
 					
 					break;
 				case 'date':
-					if (! /^(\d{1,4})\-((0?[1-9])|(1[0-2]))\-(([012]?[0-9])|(3[01]))$/.test (value))
+					if (! /^(\d{1,4})\-((0?[1-9])|(1[0-2]))\-(([012]?[0-9])|(3[01]))$/.test (value) && value.constructor.name !== 'Date')
 						return this.invalid (this.name, 'must be a valid date');
 					
 					let date = new Date (value);
@@ -231,6 +231,11 @@ module.exports = class FieldValidator
 				case 'boolean':
 					if (! [true, false, 0, 1, 'true', 'false', '0', '1'].includes (value))
 						return this.invalid (this.name, 'must be a boolean value (true or false)');
+					
+					break;
+				case 'object':
+					if (typeof value !== 'object')
+						return this.invalid (this.name, 'must be an object');
 					
 					break;
 				case 'distinct':
