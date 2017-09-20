@@ -1,4 +1,4 @@
-# Input Field Validator
+# Input Field Validator [![Build Status](https://travis-ci.org/RobinJ1995/input-field-validator.svg?branch=master)](https://travis-ci.org/RobinJ1995/input-field-validator)
 
 A Javascript input validation library heavily inspired by [Laravel's input validation](https://laravel.com/docs/5.4/validation).
 
@@ -54,6 +54,7 @@ if (! validation.validate ())
 * date:after (`date:before:now` checks if the input date is in the past, `date:after:1995-02-03` checks if the input date is after the 3rd of February 1995)
 * date:equal (`date:before:now` checks if the input date is today's date, `date:equal:1995-02-03` checks if the input date is the 3rd of February 1995)
 * boolean (checks if the input is a boolean value; accepted values are true, false, 0, 1, "true", "false", "0" and "1")
+* object (checks if the input is an object)
 * distinct (checks that the field's value is not present anywhere else in the input)
 * ip
 * ipv4
