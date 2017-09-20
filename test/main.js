@@ -48,8 +48,20 @@ let tests = {
 	'uppercase': {
 		valid: [ '0', '1', new String (2), '10', 'TRUE', 'FALSE', 'ABC', 'LOREM IPSUM' ],
 		invalid: [ 0, true, false, 9007199254740991, { '0': 1 }, { HELLO: 'WORLD' }, [ 'YO!' ], [ 'A' ], 409, 5, 'lowercase string', 'Joske' ]
+	},
+	'alpha': {
+		valid: [ 'AbcD', 'aaaaaaaaaaaaaaaaaaaa', new String ('NOOTNOOT'), 'TRUE', 'FALSE', 'ABC', 'LÖRẼMÏPSÚM', 'Knödel', 'Hé', 'nĭhăo' ],
+		invalid: [ 0, true, false, 9007199254740991, { '0': 1 }, { HELLO: 'WORLD' }, [ 'YO!' ], [ 'A' ], 409, 5, 'hello@example', 'how are you', 'hello123', '1+1=2', 'a.b', '1.25', '1,25', '1-2', 'A-z', '0_o' ]
+	},
+	'alpha_num': {
+		valid: [ 'AbcD', 'aaaaaaaaaaaaaaaaaaaa', new String ('NOOTNOOT'), 'TRUE', 'FALSE', 'ABC', 'LÖRẼMÏPSÚM', 'Knödel', 'Hé', 'nĭhăo', 'hello123' ],
+		invalid: [ 0, true, false, 9007199254740991, { '0': 1 }, { HELLO: 'WORLD' }, [ 'YO!' ], [ 'A' ], 409, 5, 'hello@example', 'how are you', '1+1=2', 'a.b', '1.25', '1,25', '1-2', 'A-z', '0_o' ]
+	},
+	'alpha_dash': {
+		valid: [ 'AbcD', 'aaaaaaaaaaaaaaaaaaaa', new String ('NOOTNOOT'), 'TRUE', 'FALSE', 'ABC', 'LÖRẼMÏPSÚM', 'Knödel', 'Hé', 'nĭhăo', '1-2', 'A-z', '0_o' ],
+		invalid: [ 0, true, false, 9007199254740991, { '0': 1 }, { HELLO: 'WORLD' }, [ 'YO!' ], [ 'A' ], 409, 5, 'hello@example', 'how are you', '1+1=2', 'a.b', '1.25', '1,25' ]
 	}
-	// this is incredibly tedious. i'll finish it "later". //
+	//TODO//
 };
 
 for (let rule in tests)
