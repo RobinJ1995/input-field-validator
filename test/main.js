@@ -60,11 +60,15 @@ let tests = {
 	'alpha_dash': {
 		valid: [ 'AbcD', 'aaaaaaaaaaaaaaaaaaaa', new String ('NOOTNOOT'), 'TRUE', 'FALSE', 'ABC', 'LÖRẼMÏPSÚM', 'Knödel', 'Hé', 'nĭhăo', '1-2', 'A-z', '0_o' ],
 		invalid: [ 0, true, false, 9007199254740991, { '0': 1 }, { HELLO: 'WORLD' }, [ 'YO!' ], [ 'A' ], 409, 5, 'hello@example', 'how are you', '1+1=2', 'a.b', '1.25', '1,25' ]
+	},
+	'date': {
+		valid: [ '2017-10-04', '9999-12-31', '2017-09-30', '2017-08-31' ],
+		invalid: [ '04-10-2017', '31-09-2017', '45-85-3528', '3528-85-45', '1-02-31', 'Wednesday the 4th of October, 2017', '2017/10/04', '2017.10.04', '1-1-1', '2099-1-2', '2099-01-2', '2099-1-02' ]
 	}
 	//TODO//
 };
 
-for (let rule in tests)
+for (const rule in tests)
 {
 	let valid = {};
 	let validRules = {};
@@ -73,20 +77,20 @@ for (let rule in tests)
 	
 	for (let validInput of tests[rule].valid)
 	{
-		let key = validInput.constructor.name + '::' + String (validInput);
+		const key = validInput.constructor.name + '::' + String (validInput);
 		valid[key] = validInput;
 		validRules[key] = [ rule ];
 	}
 	for (let invalidInput of tests[rule].invalid)
 	{
-		let key = invalidInput.constructor.name + '::' + String (invalidInput);
+		const key = invalidInput.constructor.name + '::' + String (invalidInput);
 		invalid[key] = invalidInput;
 		invalidRules[key] = [ rule ];
 	}
 	
 	describe (rule, () => {
 		it ('should validate', (done) => {
-			let validator = new Validator (valid, validRules);
+			const validator = new Validator (valid, validRules);
 			
 			if (validator.validate ())
 				done ();
@@ -95,7 +99,7 @@ for (let rule in tests)
 		});
 	
 		it ('should not validate', (done) => {
-			let validator = new Validator (invalid, invalidRules);
+			const validator = new Validator (invalid, invalidRules);
 			validator.reverse = true;
 			
 			if (validator.validate ())
