@@ -81,6 +81,41 @@ let tests = {
 		valid: [ new Date('9999-12-31') ],
 		invalid: [ new Date('2017-10-03'), '2017-10-03' ]
 	},
+	'boolean': {
+		valid: [ true, false, 'true', 'false', 0, 1, '0', '1' ],
+		invalid: [ new Date('2017-10-03'), '2017-10-03', 'yes', 'no', '', 'herpederp', 2, -1, 111, 100, 1.1, {}, [] ]
+	},
+	'object': {
+		valid: [ {}, { key: 'value' }, new Date () ],
+		invalid: [ '2017-10-03', 'yes', 'no', '', 'herpederp', 2, -1, 111, 100, 1.1, true, false, 'true', 'false', 0, 1, '0', '1', [], [1, '2', 'three'] ]
+	},
+	'distinct': {
+		valid: [
+			[ 1, 'joske', '1', [ 1 ], { value: 1 }, new Date () ],
+			[ new Date ('2017-11-02'), '2017-11-02' ],
+			[ true, 'true' ],
+			[ false, 'false', 0 ]
+		],
+		invalid: [
+			[ '1', '1' ],
+			[ 1, 1 ],
+			[ 0, 0 ],
+			[ new Date ('2017-11-02'), new Date ('2017-11-02') ],
+			[ 'NOOT NOOT', 'NOOT NOOT' ],
+			[ {}, {} ],
+			[ { key: 'value' }, { key: 'value' } ],
+			[ 1.0, 1 ],
+			[ `x`, new String ('x') ],
+			[ "x", `x` ],
+			[ [ 1, 2, 3 ], [ 1, 2, 3 ] ],
+			[ { '1': 1, '2': 2, x: 'x' }, { '2': 2, x: 'x', '1': 1 } ]
+		]
+	},
+	//TODO// ip //
+	'ipv4': {
+		valid: [ '0.0.0.1', '255.255.255.254', '127.0.0.1', '188.226.180.226', '0.0.0.0', '255.255.255.255' ],
+		invalid: [ '127.0.0.256', [], {}, 127, true, false, 0, 1, ['127.0.0.1'], '*', '127.0.0.1/24' ]
+	},
 	//TODO//
 };
 

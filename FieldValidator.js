@@ -236,16 +236,27 @@ module.exports = class FieldValidator
 					
 					break;
 				case 'object':
-					if (typeof value !== 'object')
+					if (typeof value !== 'object' || Array.isArray (value))
 						return this.invalid (this.name, 'must be an object');
 					
 					break;
 				case 'distinct':
-					let values = Object.values (this.input);
-					values = values.splice (values.indexOf (value), 1);
+					let duplicates = value.filter
+					(
+						(val1, i) => {
+							let spliced = [...value];
+							spliced.splice (i, 1);
+							
+							return spliced.reduce
+							(
+								(includes, val2) => JSON.stringify(val1) === JSON.stringify(val2),
+								false
+							);
+						}
+					);
 					
-					if (values.includes (value))
-						return this.invalid (this.name, 'must contain a distinct value');
+					if (duplicates.length > 0)
+						return this.invalid (this.name, 'must be a distinct value');
 					
 					break;
 				case 'ip':
