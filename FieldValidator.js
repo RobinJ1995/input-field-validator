@@ -25,7 +25,7 @@ module.exports = class FieldValidator
 			switch (name)
 			{
 				case 'array':
-					if (this.value.constructor === Array)
+					if (this.value && this.value.constructor === Array)
 					{
 						if (this.rules.includes ('required') && this.value.length === 0)
 							this.invalid (this.name, 'must not be empty');
@@ -57,17 +57,18 @@ module.exports = class FieldValidator
 				break; // Value is optional and not present //
 			
 			let value = this.value; // Let's make a copy to manipulate //
+			let valueLength;
 			
 			switch (name)
 			{
 				case 'int':
 				case 'integer':
-					if (! (Number.isInteger (value) || ((value.constructor.name === 'String' && String (parseInt (value)) === value))))
+					if (! (Number.isInteger (value) || ((this.getConstructorName(value) === 'String' && String (parseInt (value)) === value))))
 						return this.invalid (this.name, 'must be an integer');
 					
 					break;
 				case 'number':
-					if (value.constructor.name === 'String')
+					if (this.getConstructorName(value) === 'String')
 					{
 						value = Number (value);
 						
@@ -75,12 +76,12 @@ module.exports = class FieldValidator
 							return this.invalid (this.name, 'must be a number');
 					}
 					
-					if (value.constructor.name !== 'Number' || isNaN (value))
+					if (this.getConstructorName(value) !== 'Number' || isNaN (value))
 						return this.invalid (this.name, 'must be a number');
 					
 					break;
 				case 'string':
-					if (value.constructor.name !== 'String')
+					if (this.getConstructorName(value) !== 'String')
 						return this.invalid (this.name, 'must be a string');
 					
 					break;
@@ -94,35 +95,35 @@ module.exports = class FieldValidator
 					this.rules.push ('string');
 					if (! /^https?:\/\/[a-z0-9$\-_\+\!\*\'\(\),]+.[a-z0-9$\-_\+\!\*\'\(\),\.]+\.[a-z0-9]+(\/[^\s]*)?$/i.test (value))
 						return this.invalid (this.name, 'must be a valid URL');
-					
+
 					break;
 				case 'length':
-					if (value.constructor.name === 'Number')
+					if (this.getConstructorName(value) === 'Number')
 						value = String (value);
 					
-					if (value.length !== parseInt (parts[1]))
+					if (this.getValueLength(value) === null || this.getValueLength(value) !== parseInt (parts[1]))
 						return this.invalid (this.name, 'must be ' + parts[1] + ' characters long');
 					
 					break;
 				case 'maxlength':
-					if (value.constructor.name === 'Number')
+					if (this.getConstructorName(value) === 'Number')
 						value = String (value);
 					
-					if (isNaN (value.length) || value.length > parseInt (parts[1]))
+					if (this.getValueLength(value) === null || this.getValueLength(value) > parseInt (parts[1]))
 						return this.invalid (this.name, 'must be no more than ' + parts[1] + ' characters long');
 					
 					break;
 				case 'minlength':
-					if (value.constructor.name === 'Number')
+					if (this.getConstructorName(value) === 'Number')
 						value = String (value);
 					
-					if (isNaN (value.length) || value.length < parseInt (parts[1]))
+					if (this.getValueLength(value) === null || this.getValueLength(value) < parseInt (parts[1]))
 						return this.invalid (this.name, 'must be at least ' + parts[1] + ' characters long');
 					
 					break;
 				case 'in':
 					let options = parts[1].split (',');
-					if (['Number', 'Boolean'].includes (value.constructor.name))
+					if (['Number', 'Boolean'].includes (this.getConstructorName(value)))
 						value = String (value);
 					
 					if (! options.includes (value))
@@ -197,7 +198,7 @@ module.exports = class FieldValidator
 					
 					break;
 				case 'date':
-					if (! /^(?:\d{4}\-(?:(?:(?:(?:0[13578]|1[02])\-(?:0[1-9]|[1-2][0-9]|3[01]))|(?:(?:0[469]|11)\-(?:0[1-9]|[1-2][0-9]|30))|(?:02\-(?:0[1-9]|1[0-9]|2[0-8]))))|(?:(?:\d{2}(?:0[48]|[2468][048]|[13579][26]))|(?:(?:[02468][048])|[13579][26])00)\-02\-29)$/.test (value) && value.constructor.name !== 'Date')
+					if (! /^(?:\d{4}\-(?:(?:(?:(?:0[13578]|1[02])\-(?:0[1-9]|[1-2][0-9]|3[01]))|(?:(?:0[469]|11)\-(?:0[1-9]|[1-2][0-9]|30))|(?:02\-(?:0[1-9]|1[0-9]|2[0-8]))))|(?:(?:\d{2}(?:0[48]|[2468][048]|[13579][26]))|(?:(?:[02468][048])|[13579][26])00)\-02\-29)$/.test (value) && this.getConstructorName(value) !== 'Date')
 						return this.invalid (this.name, 'must be a valid date');
 					
 					const date = new Date (value);
@@ -236,7 +237,7 @@ module.exports = class FieldValidator
 					
 					break;
 				case 'object':
-					if (typeof value !== 'object' || Array.isArray (value))
+					if (value === null || typeof value !== 'object' || Array.isArray (value))
 						return this.invalid (this.name, 'must be an object');
 					
 					break;
@@ -307,6 +308,20 @@ module.exports = class FieldValidator
 		this.error = fieldName + ' ' + message;
 		
 		return false;
+	}
+	
+	getConstructorName (value)
+	{
+		if (value === null || value === undefined)
+			return null;
+		return value.constructor.name;
+	}
+	
+	getValueLength (value)
+	{
+		if (value === null || value === undefined || this.getConstructorName(value.length) !== 'Number')
+			return null;
+		return value.length;
 	}
 }
 
