@@ -1,32 +1,27 @@
-let FieldValidator = require ('./FieldValidator');
+const FieldValidator = require('./FieldValidator');
 
-class Validator
-{
-	constructor (input, rules)
-	{
+class Validator {
+	constructor(input, rules) {
 		this.valid = null;
 		this.errors = [];
 		this.fieldErrors = [];
-		
+
 		this.reverse = false;
-		
+
 		this.input = input;
 		this.rules = rules;
 	}
-	
-	validate ()
-	{
+
+	validate() {
 		let valid = true;
 		this.errors = [];
-		
-		for (let field in this.rules)
-		{
-			let fieldValidator = new FieldValidator (field, this.input[field], this.rules[field], this.input);
-			
-			if (! fieldValidator.validate () && ! this.reverse)
-			{
+
+		for (let field in this.rules) {
+			const fieldValidator = new FieldValidator(field, this.input[field], this.rules[field], this.input);
+
+			if (!fieldValidator.validate() && !this.reverse) {
 				valid = false;
-				this.errors.push (fieldValidator.error);
+				this.errors.push(fieldValidator.error);
 				this.fieldErrors.push
 				(
 					{
@@ -34,11 +29,9 @@ class Validator
 						error: fieldValidator.fieldError
 					}
 				);
-			}
-			else if (this.reverse && fieldValidator.validate ()) // This is pretty much just here for testing //
-			{
+			} else if (this.reverse && fieldValidator.validate()) { // This is pretty much just here for testing //
 				valid = false;
-				this.errors.push (field + ' is valid');
+				this.errors.push(field + ' is valid');
 				this.fieldErrors.push
 				(
 					{
@@ -48,12 +41,13 @@ class Validator
 				);
 			}
 		}
-		
+
 		this.valid = valid;
-		
+
 		return valid;
 	}
 }
+
 Validator.FieldValidator = FieldValidator;
 
 module.exports = Validator;
