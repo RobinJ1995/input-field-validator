@@ -111,52 +111,119 @@ let tests = {
 			[ { '1': 1, '2': 2, x: 'x' }, { '2': 2, x: 'x', '1': 1 } ]
 		]
 	},
-	//TODO// ip //
+	'ip': {
+		valid: [
+			'0.0.0.1',
+			'255.255.255.254',
+			'127.0.0.1',
+			'188.226.180.226',
+			'0.0.0.0',
+			'255.255.255.255',
+			'2001:db8:3333:4444:5555:6666:7777:8888',
+			'2001:db8:3333:4444:CCCC:DDDD:EEEE:FFFF',
+			'::',
+			'2001:db8::',
+			'::1234:5678',
+			'2001:db8::1234:5678',
+			'2001:0db8:0001:0000:0000:0ab9:C0A8:0102',
+			'2001:db8:1::ab9:C0A8:102',
+			'2002:100::',
+			'AAAA::'
+		],
+		invalid: [
+			undefined,
+			null,
+			'127.0.0.256',
+			[],
+			{},
+			127,
+			true,
+			false,
+			0,
+			1,
+			['127.0.0.1'],
+			'*',
+			'127.0.0.1/24',
+			'QQQQ::'
+		]
+	},
 	'ipv4': {
 		valid: [ '0.0.0.1', '255.255.255.254', '127.0.0.1', '188.226.180.226', '0.0.0.0', '255.255.255.255' ],
-		invalid: [ undefined, null, '127.0.0.256', [], {}, 127, true, false, 0, 1, ['127.0.0.1'], '*', '127.0.0.1/24' ]
+		invalid: [ undefined, null, '127.0.0.256', [], {}, 127, true, false, 0, 1, ['127.0.0.1'], '*', '127.0.0.1/24', '2001:db8:3333:4444:5555:6666:7777:8888', '::' ]
+	},
+	'ipv6': {
+		valid: [
+			// https://www.ibm.com/support/knowledgecenter/en/STCMML8/com.ibm.storage.ts3500.doc/opg_3584_IPv4_IPv6_addresses.html //
+			'2001:db8:3333:4444:5555:6666:7777:8888',
+			'2001:db8:3333:4444:CCCC:DDDD:EEEE:FFFF',
+			'::',
+			'2001:db8::',
+			'::1234:5678',
+			'2001:db8::1234:5678',
+			'2001:0db8:0001:0000:0000:0ab9:C0A8:0102',
+			'2001:db8:1::ab9:C0A8:102',
+			'2002:100::',
+			'AAAA::'
+		],
+		invalid: [
+			undefined,
+			null,
+			'127.0.0.256',
+			[],
+			{},
+			127,
+			true,
+			false,
+			0,
+			1,
+			['127.0.0.1'],
+			'*',
+			'127.0.0.1/24',
+			'127.0.0.1',
+			'QQQQ::'
+		]
 	},
 	//TODO//
 };
 
 for (const rule in tests)
 {
-	let valid = {};
-	let validRules = {};
-	let invalid = {};
-	let invalidRules = {};
-	
-	for (let validInput of tests[rule].valid)
-	{
-		const key = getValueType(validInput) + '::' + String (validInput);
-		valid[key] = validInput;
-		validRules[key] = [ rule ];
-	}
-	for (let invalidInput of tests[rule].invalid)
-	{
-		const key = getValueType(invalidInput) + '::' + String (invalidInput);
-		invalid[key] = invalidInput;
-		invalidRules[key] = [ rule ];
-	}
-	
-	describe (rule, () => {
-		it ('should validate', (done) => {
-			const validator = new Validator (valid, validRules);
-			
-			if (validator.validate ())
-				done ();
-			else
-				done (validator.errors);
+	describe(rule, () => {
+		const { valid, invalid } = tests[rule];
+
+		valid.forEach(validValue => {
+			const key = getValueType(validValue) + '::' + String(validValue);
+			it(`"${validValue}" should be valid according to rule "${rule}"`, done => {
+				const validator = new Validator({
+					[key]: validValue
+				}, {
+					[key]: [rule]
+				});
+				if (validator.validate()) {
+					done();
+					return;
+				}
+
+				done(validator.errors);
+			});
 		});
-	
-		it ('should not validate', (done) => {
-			const validator = new Validator (invalid, invalidRules);
-			validator.reverse = true;
-			
-			if (validator.validate ())
-				done ();
-			else
-				done (validator.errors);
+
+		invalid.forEach(invalidValue => {
+			const key = getValueType(invalidValue) + '::' + String(invalidValue);
+			it(`"${invalidValue}" should be invalid according to rule "${rule}"`, done => {
+				const validator = new Validator({
+					[key]: invalidValue
+				}, {
+					[key]: [rule]
+				});
+				validator.reverse = true;
+				if (validator.validate()) {
+					done();
+					return;
+				}
+
+				done(validator.errors);
+			});
 		});
 	});
 }
