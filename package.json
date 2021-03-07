@@ -1,6 +1,6 @@
 {
   "name": "input-field-validator",
-  "version": "1.2.4",
+  "version": "1.2.5",
   "description": "Input field validator",
   "main": "Validator.js",
   "scripts": {
@@ -12,7 +12,6 @@
     "type": "git",
     "url": "https://github.com/RobinJ1995/input-field-validator.git"
   },
-  "dependencies": {},
   "devDependencies": {
     "mocha": "^3.5.3"
   }
