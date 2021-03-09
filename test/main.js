@@ -1,3 +1,5 @@
+const { v1: uuid1, v4: uuid4, v5: uuid5 } = require('uuid');
+
 let Validator = require ('../Validator');
 
 let tests = {
@@ -183,7 +185,120 @@ let tests = {
 			'QQQQ::'
 		]
 	},
-	//TODO//
+	'json': {
+		valid: [
+			'{}',
+			'{"a": 0}',
+			'{"a": "b"}',
+			'{"x": null}',
+			'[1, 2, 3]',
+			'["a", 2, null]',
+			'{"x": [1, null, "b"]}',
+			' {"a": 0}',
+			'{"a": 0} ',
+			'      {"a": 0}  												',
+		],
+		invalid: [
+			undefined,
+			null,
+			'127.0.0.256',
+			[],
+			{},
+			127,
+			true,
+			false,
+			0,
+			1,
+			{ 'a': 0 }
+			['something'],
+			['{"a": 0}'],
+			'*',
+			'127.0.0.1/24',
+			'127.0.0.1',
+			'QQQQ::',
+			'null',
+			'undefined',
+			'{a: 0}',
+			'{x: null}',
+			'{b: "x"}',
+			"{'a': 0}",
+			'{"a": 0},',
+			'"hello world"',
+			',{"a": 0}',
+			'{"a": 0},',
+			'1',
+			'true'
+		]
+	},
+	'regex:^[a-z\-]{5,}$': {
+		valid: [
+			'asdsa-d-xsc-dx-b-dtfg-gh-fb-gc--gh-',
+			'-------',
+			'aaaaaaaaaaaaaaaaaaaaaaaaaaa',
+			'a-a-a',
+		],
+		invalid: [
+			undefined,
+			null,
+			'127.0.0.256',
+			[],
+			{},
+			127,
+			true,
+			false,
+			0,
+			1,
+			['127.0.0.1'],
+			'*',
+			'127.0.0.1/24',
+			'127.0.0.1',
+			'QQQQ::',
+			'a',
+			'----',
+			'aaaa',
+			'aaaaaaaaaaa0aaaaaa',
+		]
+	},
+	'uuid': {
+		valid: [
+			'd541dcbd-f4ee-45ff-a8dc-c9230646e106',
+			'00000000-0000-0000-0000-000000000000',
+			uuid1(), uuid4(), uuid1(), uuid4(), uuid1(), uuid4(), uuid1(), uuid4(), uuid1(), uuid4(), uuid1(), uuid4(),
+			uuid1(), uuid4(), uuid1(), uuid4(), uuid1(), uuid4(), uuid1(), uuid4(), uuid1(), uuid4(), uuid1(), uuid4()
+		],
+		invalid: [
+			' d541dcbd-f4ee-45ff-a8dc-c9230646e106',
+			'd541dcbd-f4ee-45ff-a8dc-c9230646e106 ',
+			' d541dcbd-f4ee-45ff-a8dc-c9230646e106 ',
+			'd541dcbd-f4ee-45ff-a8dc-c9230646e10',
+			'541dcbd-f4ee-45ff-a8dc-c9230646e106',
+			'd541dcbd-f4e-45ff-a8dc-c9230646e106',
+			'd541dcbd-f4ee-45f-a8dc-c9230646e106',
+			'd541dcbd-f4ee-45ff-a8c-c9230646e106',
+			'd541dcbda-f4ee-45ff-a8dc-c9230646e106',
+			'd541dcbd-f4eea-45ff-a8dc-c9230646e106',
+			'd541dcbd-f4ee-45ffa-a8dc-c9230646e106',
+			'd541dcbd-f4ee-45ff-a8dca-c9230646e106',
+			'd541dcbd-f4ee-45ff-a8dc-c9230646e106a',
+			'd541dcbda-f4eea-45ffa-a8dca-c9230646e106a',
+			'ffffffff-ffff-ffff-ffff-ffffffffffff',
+			'FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF',
+			'0-0-0-0-0',
+			'0',
+			'd541dcbd-f4ee-45ff-a8dc-g9230646e106',
+			undefined,
+			null,
+			[],
+			{},
+			127,
+			true,
+			false,
+			0,
+			1,
+			0x8,
+			['d541dcbd-f4ee-45ff-a8dc-c9230646e106']
+		]
+	}
 };
 
 for (const rule in tests)

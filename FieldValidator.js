@@ -1,3 +1,5 @@
+const { validate: validateUuid } = require('uuid');
+
 module.exports = class FieldValidator {
 	constructor(name, value, rules, input) {
 		this.valid = null;
@@ -268,7 +270,21 @@ module.exports = class FieldValidator {
 				case 'json':
 					this.rules.push('string');
 					try {
-						JSON.parse(value);
+						const rejsonified = JSON.stringify(JSON.parse(value));
+						if (rejsonified.length < 2) {
+							return this.invalid(this.name, 'must be valid JSON data');
+						} else if (rejsonified.substr(0, 1) === '{'
+							&& rejsonified.substr(-1, 1) === '}') {
+							// JSON object
+							break;
+						} else if (rejsonified.substr(0, 1) === '['
+							&& rejsonified.substr(-1, 1) === ']') {
+							// JSON array
+							break;
+						}
+
+						// Technically valid JSON, but neither an object nor an array.
+						return this.invalid(this.name, 'must be valid JSON data');
 					} catch (e) {
 						return this.invalid(this.name, 'must be valid JSON data');
 					}
@@ -278,6 +294,13 @@ module.exports = class FieldValidator {
 					let regex = new RegExp(rule.substr(rule.split(':', 1)[0].length + 1));
 					if (!regex.test(value))
 						return this.invalid(this.name, 'must match the following regular expression: ' + regex);
+
+					break;
+				case 'uuid':
+					this.rules.push('string');
+					if (!validateUuid(value)) {
+						return this.invalid(this.name, 'must be a valid UUID');
+					}
 
 					break;
 			}
