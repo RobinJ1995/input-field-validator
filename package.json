@@ -1,6 +1,6 @@
 {
   "name": "input-field-validator",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "description": "Input field validator",
   "main": "Validator.js",
   "scripts": {
