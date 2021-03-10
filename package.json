@@ -14,5 +14,8 @@
   },
   "devDependencies": {
     "mocha": "^3.5.3"
+  },
+  "dependencies": {
+    "uuid": "^8.3.2"
   }
 }
