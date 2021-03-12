@@ -4,7 +4,7 @@
   "description": "Input field validator",
   "main": "Validator.js",
   "scripts": {
-    "test": "mocha test/main.js"
+    "test": "mocha test/*.js"
   },
   "author": "Robin Jacobs",
   "license": "GPLv2",

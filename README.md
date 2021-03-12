@@ -5,10 +5,9 @@ A Javascript input validation library heavily inspired by [Laravel's input valid
 ## Example
 
 ```js
-let Validator = require ('input-field-validator');
+const Validator = require('input-field-validator');
 
-let validation = new Validator
-(
+const validation = new Validator(
 	req.body,
 	{
 		first_name: ['required', 'minlength:3'],
@@ -19,12 +18,16 @@ let validation = new Validator
 		password_confirm: ['required', 'same:password'],
 		dob: ['required', 'date:before:2010-01-01'],
 		gender: ['required', 'in:male,female,unspecified'],
-		tags: ['optional', 'array', 'minlength:3', 'maxlength:32']
+		tags: ['optional', 'array', 'minlength:3', 'maxlength:32'],
+		location: {
+		    country: ['required', 'minlength:3'],
+			city: ['optional', 'minlength:3']
+		}
 	}
 );
 
-if (! validation.validate ())
-	throw new Error (validation.errors.join (', '));
+if (!validation.validate ())
+	throw new Error(validation.errors.join (', '));
 ```
 
 ## Available validators
@@ -67,3 +70,5 @@ if (! validation.validate ())
 * `regex` (tests the input value against the given regular expression)
 	* Example: `regex:^[a-z\-]{5,}$`
 * `uuid` (checks whether the input value is an RFC 4122 compliant UUID)
+
+Nested validation is also supported by simply providing an object with keys matching the map in the input, and their validation rules. See the `location` field in the example above.

@@ -1,12 +1,15 @@
 const { validate: validateUuid } = require('uuid');
 
 module.exports = class FieldValidator {
-	constructor(name, value, rules, input) {
+	constructor(name, value, rules, input, cosmeticName) {
 		this.valid = null;
+		this.fieldName = null;
+		this._fieldErrorRaw = null;
 		this.fieldError = null;
 		this.error = null;
 
 		this.name = name;
+		this.cosmeticName = cosmeticName ?? name;
 		this.value = value;
 		this.rules = rules;
 		this.input = input;
@@ -17,6 +20,28 @@ module.exports = class FieldValidator {
 
 	validate() {
 		for (const rule of this.rules) {
+			if (rule.constructor !== String) {
+				const innerInput = this.input[this.name];
+
+				for (const field in rule) {
+					const innerCosmeticFieldName = `${this.cosmeticName}.${field}`;
+					const innerFieldValue = innerInput[field];
+					const innerRule = rule[field];
+					const innerFieldValidator = new FieldValidator(field, innerFieldValue, innerRule, innerInput, innerCosmeticFieldName);
+
+					if (!innerFieldValidator.validate()) {
+						return this.invalid(
+							innerFieldValidator.fieldName ?? innerFieldValidator.cosmeticName,
+							innerFieldValidator._fieldErrorRaw);
+					}
+				}
+
+				this.error = null;
+				this.valid = true;
+
+				return true;
+			}
+
 			const parts = rule.split(':');
 			const name = parts[0];
 
@@ -24,23 +49,23 @@ module.exports = class FieldValidator {
 				case 'array':
 					if (this.value && this.value.constructor === Array) {
 						if (this.rules.includes('required') && this.value.length === 0)
-							this.invalid(this.name, 'must not be empty');
+							this.invalid(null, 'must not be empty');
 
 						const itemRules = this.rules.splice(this.rules.indexOf('array'), 1);
 						for (let i = 0; i < this.value.length; i++) {
 							const itemValidator = new FieldValidator(`${this.name}.${i}`, this.value[i], itemRules);
 							if (!itemValidator.validate()) {
-								return this.invalid(this.name, itemValidator.fieldError);
+								return this.invalid(null, itemValidator.fieldError);
 							}
 						}
 					} else {
-						return this.invalid(this.name, 'must be an array');
+						return this.invalid(null, 'must be an array');
 					}
 
 					break;
 				case 'required':
 					if (this.value === null || this.value === undefined || this.value === '')
-						return this.invalid(this.name, 'is required');
+						return this.invalid(null, 'is required');
 
 					break;
 			}
@@ -56,7 +81,7 @@ module.exports = class FieldValidator {
 				case 'int':
 				case 'integer':
 					if (!(Number.isInteger(value) || ((this.getConstructorName(value) === 'String' && String(parseInt(value)) === value))))
-						return this.invalid(this.name, 'must be an integer');
+						return this.invalid(null, 'must be an integer');
 
 					break;
 				case 'number':
@@ -64,28 +89,28 @@ module.exports = class FieldValidator {
 						value = Number(value);
 
 						if (String(value) !== this.value)
-							return this.invalid(this.name, 'must be a number');
+							return this.invalid(null, 'must be a number');
 					}
 
 					if (this.getConstructorName(value) !== 'Number' || isNaN(value))
-						return this.invalid(this.name, 'must be a number');
+						return this.invalid(null, 'must be a number');
 
 					break;
 				case 'string':
 					if (this.getConstructorName(value) !== 'String')
-						return this.invalid(this.name, 'must be a string');
+						return this.invalid(null, 'must be a string');
 
 					break;
 				case 'email':
 					this.rules.push('string');
 					if (!/^[^@\s]+@[^@\s]+\.[^@\s]{2,}$/i.test(value))
-						return this.invalid(this.name, 'must be a valid e-mail address');
+						return this.invalid(null, 'must be a valid e-mail address');
 
 					break;
 				case 'url':
 					this.rules.push('string');
 					if (!/^https?:\/\/[a-z0-9$\-_\+\!\*\'\(\),]+.[a-z0-9$\-_\+\!\*\'\(\),\.]+\.[a-z0-9]+(\/[^\s]*)?$/i.test(value))
-						return this.invalid(this.name, 'must be a valid URL');
+						return this.invalid(null, 'must be a valid URL');
 
 					break;
 				case 'length':
@@ -93,7 +118,7 @@ module.exports = class FieldValidator {
 						value = String(value);
 
 					if (this.getValueLength(value) === null || this.getValueLength(value) !== parseInt(parts[1]))
-						return this.invalid(this.name, 'must be ' + parts[1] + ' characters long');
+						return this.invalid(null, 'must be ' + parts[1] + ' characters long');
 
 					break;
 				case 'maxlength':
@@ -101,7 +126,7 @@ module.exports = class FieldValidator {
 						value = String(value);
 
 					if (this.getValueLength(value) === null || this.getValueLength(value) > parseInt(parts[1]))
-						return this.invalid(this.name, 'must be no more than ' + parts[1] + ' characters long');
+						return this.invalid(null, 'must be no more than ' + parts[1] + ' characters long');
 
 					break;
 				case 'minlength':
@@ -109,7 +134,7 @@ module.exports = class FieldValidator {
 						value = String(value);
 
 					if (this.getValueLength(value) === null || this.getValueLength(value) < parseInt(parts[1]))
-						return this.invalid(this.name, 'must be at least ' + parts[1] + ' characters long');
+						return this.invalid(null, 'must be at least ' + parts[1] + ' characters long');
 
 					break;
 				case 'in':
@@ -118,14 +143,14 @@ module.exports = class FieldValidator {
 						value = String(value);
 
 					if (!options.includes(value))
-						return this.invalid(this.name, 'must be one of the following values: ' + options.join(', '));
+						return this.invalid(null, 'must be one of the following values: ' + options.join(', '));
 
 					break;
 				case 'same': { // to prevent otherFields from being hoisted up too far //
 					let otherFields = parts[1].split(',');
 					for (let otherField of otherFields) {
 						if (this.input[otherField] !== value)
-							return this.invalid(this.name, 'must be the same as ' + otherFields.join(', '));
+							return this.invalid(null, 'must be the same as ' + otherFields.join(', '));
 					}
 
 					break;
@@ -135,7 +160,7 @@ module.exports = class FieldValidator {
 					let values = [value];
 					for (let otherField of otherFields) {
 						if (values.includes(this.input[otherField]))
-							return this.invalid(this.name, 'must be different from ' + otherFields.join(', '));
+							return this.invalid(null, 'must be different from ' + otherFields.join(', '));
 						else
 							values.push(this.input[otherField]);
 					}
@@ -144,49 +169,49 @@ module.exports = class FieldValidator {
 				}
 				case 'required_with':
 					if (this.input[parts[1]] && (value === null || value === undefined || value === ''))
-						return this.invalid(this.name, 'is required with ' + parts[1]);
+						return this.invalid(null, 'is required with ' + parts[1]);
 
 					break;
 				case 'required_if':
 					if ((this.input[parts[1]] == parts[2]) && (value === null || value === undefined || value === ''))
-						return this.invalid(this.name, 'is required if ' + parts[1] + ' is ' + parts[2]);
+						return this.invalid(null, 'is required if ' + parts[1] + ' is ' + parts[2]);
 
 					break;
 				case 'lowercase':
 					this.rules.push('string');
 					value = String(value);
 					if (value !== value.toLowerCase())
-						return this.invalid(this.name, 'must be lower case');
+						return this.invalid(null, 'must be lower case');
 
 					break;
 				case 'uppercase':
 					this.rules.push('string');
 					value = String(value);
 					if (value !== value.toUpperCase())
-						return this.invalid(this.name, 'must be upper case');
+						return this.invalid(null, 'must be upper case');
 
 					break;
 				case 'alpha':
 					this.rules.push('string');
 					if (!regexAlpha.test(value))
-						return this.invalid(this.name, 'must consist of alphabetic characters');
+						return this.invalid(null, 'must consist of alphabetic characters');
 
 					break;
 				case 'alpha_num':
 					this.rules.push('string');
 					if (!regexAlphaNum.test(value))
-						return this.invalid(this.name, 'must consist of alphanumeric characters');
+						return this.invalid(null, 'must consist of alphanumeric characters');
 
 					break;
 				case 'alpha_dash':
 					this.rules.push('string');
 					if (!regexAlphaDash.test(value))
-						return this.invalid(this.name, 'must consist of alphanumeric characters, dashes and underscores');
+						return this.invalid(null, 'must consist of alphanumeric characters, dashes and underscores');
 
 					break;
 				case 'date':
 					if (!/^(?:\d{4}\-(?:(?:(?:(?:0[13578]|1[02])\-(?:0[1-9]|[1-2][0-9]|3[01]))|(?:(?:0[469]|11)\-(?:0[1-9]|[1-2][0-9]|30))|(?:02\-(?:0[1-9]|1[0-9]|2[0-8]))))|(?:(?:\d{2}(?:0[48]|[2468][048]|[13579][26]))|(?:(?:[02468][048])|[13579][26])00)\-02\-29)$/.test(value) && this.getConstructorName(value) !== 'Date')
-						return this.invalid(this.name, 'must be a valid date');
+						return this.invalid(null, 'must be a valid date');
 
 					const date = new Date(value);
 					date.setHours(0, 0, 0, 0);
@@ -198,17 +223,17 @@ module.exports = class FieldValidator {
 						switch (parts[1]) {
 							case 'before':
 								if (date >= date2)
-									return this.invalid(this.name, 'must be a date before ' + date2.toLocaleDateString());
+									return this.invalid(null, 'must be a date before ' + date2.toLocaleDateString());
 
 								break;
 							case 'after':
 								if (date < date2)
-									return this.invalid(this.name, 'must be a date after ' + date2.toLocaleDateString());
+									return this.invalid(null, 'must be a date after ' + date2.toLocaleDateString());
 
 								break;
 							case 'equal':
 								if (date.valueOf() !== date2.valueOf())
-									return this.invalid(this.name, 'must be ' + date2.toLocaleDateString());
+									return this.invalid(null, 'must be ' + date2.toLocaleDateString());
 
 								break;
 						}
@@ -218,12 +243,12 @@ module.exports = class FieldValidator {
 				case 'bool':
 				case 'boolean':
 					if (![true, false, 0, 1, 'true', 'false', '0', '1'].includes(value))
-						return this.invalid(this.name, 'must be a boolean value (true or false)');
+						return this.invalid(null, 'must be a boolean value (true or false)');
 
 					break;
 				case 'object':
 					if (value === null || typeof value !== 'object' || Array.isArray(value))
-						return this.invalid(this.name, 'must be an object');
+						return this.invalid(null, 'must be an object');
 
 					break;
 				case 'distinct':
@@ -242,7 +267,7 @@ module.exports = class FieldValidator {
 					);
 
 					if (duplicates.length > 0)
-						return this.invalid(this.name, 'must be a distinct value');
+						return this.invalid(null, 'must be a distinct value');
 
 					break;
 				case 'ip':
@@ -251,20 +276,20 @@ module.exports = class FieldValidator {
 						!/^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(value)
 						&& !/^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))$/.test(value)
 					) {
-						return this.invalid(this.name, 'must be a valid IP address');
+						return this.invalid(null, 'must be a valid IP address');
 					}
 
 					break;
 				case 'ipv4':
 					this.rules.push('string');
 					if (!/^(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/.test(value))
-						return this.invalid(this.name, 'must be a valid IPv4 address');
+						return this.invalid(null, 'must be a valid IPv4 address');
 
 					break;
 				case 'ipv6':
 					this.rules.push('string');
 					if (!/^(([0-9a-fA-F]{1,4}:){7,7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|fe80:(:[0-9a-fA-F]{0,4}){0,4}%[0-9a-zA-Z]{1,}|::(ffff(:0{1,4}){0,1}:){0,1}((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9])\.){3,3}(25[0-5]|(2[0-4]|1{0,1}[0-9]){0,1}[0-9]))$/.test(value))
-						return this.invalid(this.name, 'must be a valid IPv6 address');
+						return this.invalid(null, 'must be a valid IPv6 address');
 
 					break;
 				case 'json':
@@ -272,7 +297,7 @@ module.exports = class FieldValidator {
 					try {
 						const rejsonified = JSON.stringify(JSON.parse(value));
 						if (rejsonified.length < 2) {
-							return this.invalid(this.name, 'must be valid JSON data');
+							return this.invalid(null, 'must be valid JSON data');
 						} else if (rejsonified.substr(0, 1) === '{'
 							&& rejsonified.substr(-1, 1) === '}') {
 							// JSON object
@@ -284,22 +309,22 @@ module.exports = class FieldValidator {
 						}
 
 						// Technically valid JSON, but neither an object nor an array.
-						return this.invalid(this.name, 'must be valid JSON data');
+						return this.invalid(null, 'must be valid JSON data');
 					} catch (e) {
-						return this.invalid(this.name, 'must be valid JSON data');
+						return this.invalid(null, 'must be valid JSON data');
 					}
 					break;
 				case 'regex':
 					this.rules.push('string');
 					let regex = new RegExp(rule.substr(rule.split(':', 1)[0].length + 1));
 					if (!regex.test(value))
-						return this.invalid(this.name, 'must match the following regular expression: ' + regex);
+						return this.invalid(null, 'must match the following regular expression: ' + regex);
 
 					break;
 				case 'uuid':
 					this.rules.push('string');
 					if (!validateUuid(value)) {
-						return this.invalid(this.name, 'must be a valid UUID');
+						return this.invalid(null, 'must be a valid UUID');
 					}
 
 					break;
@@ -314,8 +339,10 @@ module.exports = class FieldValidator {
 
 	invalid(fieldName, message) {
 		this.valid = false;
+		this.fieldName = fieldName;
+		this._fieldErrorRaw = message;
 		this.fieldError = message.charAt(0).toUpperCase() + message.substr(1);
-		this.error = fieldName + ' ' + message;
+		this.error = (fieldName ?? this.cosmeticName) + ' ' + message;
 
 		return false;
 	}

@@ -16,7 +16,7 @@ class Validator {
 		let valid = true;
 		this.errors = [];
 
-		for (let field in this.rules) {
+		for (const field in this.rules) {
 			const fieldValidator = new FieldValidator(field, this.input[field], this.rules[field], this.input);
 
 			if (!fieldValidator.validate() && !this.reverse) {
