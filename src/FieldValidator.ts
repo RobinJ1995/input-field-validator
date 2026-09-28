@@ -59,9 +59,10 @@ class FieldValidator {
 				case 'array':
 					if (Array.isArray(this.value)) {
 						if (this.rules.includes('required') && this.value.length === 0)
-							this.invalid(null, 'must not be empty');
+							return this.invalid(null, 'must not be empty');
 
-						const itemRules = this.rules.splice(this.rules.indexOf('array'), 1);
+						const itemRules = [...this.rules];
+						itemRules.splice(itemRules.indexOf('array'), 1);
 						for (let i = 0; i < this.value.length; i++) {
 							const itemValidator = new FieldValidator(`${this.name}.${i}`, this.value[i], itemRules);
 							if (!itemValidator.validate()) {
@@ -80,7 +81,7 @@ class FieldValidator {
 					break;
 			}
 
-			if (this.rules.includes('array') && this.rules.constructor === Array)
+			if (name === 'array' && this.rules.constructor === Array)
 				break; // Rules after this are only meant for the items inside the array //
 			else if (this.rules.includes('optional') && (this.value === null || this.value === undefined))
 				break; // Value is optional and not present //
