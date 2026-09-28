@@ -7,6 +7,10 @@ let tests: Record<string, { valid: any[], invalid: any[] }> = {
 		valid: [ 0, 1, 2, 10, 11, 9999999, -1, -5, -10, -1e+22, 9007199254740991, -9007199254740991, '465', '-612' ],
 		invalid: [ undefined, null, 0.01, 1.01, 9999999.999999998, -1.5, -5.9999, 'a', '0e5', -9999999.999999998, 'zero', 'one', 'true', 'false', true, false, { '0': 1 }, [ 1 ], [ 'a' ], '0xFFF' ]
 	},
+	'int': {
+		valid: [ 0, 1, -1, 10, 9007199254740991, -9007199254740991, '465', '-612' ],
+		invalid: [ undefined, null, 0.01, -1.5, 'a', '0e5', 'zero', true, false, { '0': 1 }, [ 1 ], '0xFFF' ]
+	},
 	'number': {
 		valid: [ 0, 1, 2, 10, 11, 9999999, -1, -5, -10, -1e+22, 9007199254740991, -9007199254740991, '465', '-612', 0.01, 1.01, 9999999.999999998, -1.5, -5.9999, -9999999.999999998 ],
 		invalid: [ undefined, null, 'a', '0e5', 'zero', 'one', 'true', 'false', true, false, { '0': 1 }, [ 1 ], [ 'a' ], '0xFFF' ]
@@ -86,6 +90,18 @@ let tests: Record<string, { valid: any[], invalid: any[] }> = {
 	'boolean': {
 		valid: [ true, false, 'true', 'false', 0, 1, '0', '1' ],
 		invalid: [ undefined, null, new Date('2017-10-03'), '2017-10-03', 'yes', 'no', '', 'herpederp', 2, -1, 111, 100, 1.1, {}, [] ]
+	},
+	'bool': {
+		valid: [ true, false, 'true', 'false', 0, 1, '0', '1' ],
+		invalid: [ undefined, null, 'yes', 'no', '', 'herpederp', 2, -1, 1.1, {}, [] ]
+	},
+	'required': {
+		valid: [ 0, 1, -1, '0', 'a', ' ', true, false, [], {}, new Date () ],
+		invalid: [ undefined, null, '' ]
+	},
+	'optional': {
+		valid: [ undefined, null, '', 0, 1, false, true, 'a', [], {}, new Date () ],
+		invalid: []
 	},
 	'object': {
 		valid: [ {}, { key: 'value' }, new Date () ],

@@ -1,6 +1,75 @@
 import Validator = require('../src/Validator');
 
 let tests: Record<string, { valid: any[], invalid: any[] }> = {
+	'same:other': {
+		valid: [
+			{ subject: 'x', other: 'x' },
+			{ subject: '', other: '' },
+			{ subject: 0, other: 0 },
+			{ subject: false, other: false },
+			{ subject: null, other: null }
+		],
+		invalid: [
+			{ subject: 'x', other: 'y' },
+			{ subject: 'x', other: 'X' },
+			{ subject: 1, other: '1' },
+			{ subject: 0, other: false },
+			{ subject: '', other: null },
+			{ subject: 'x' }
+		]
+	},
+	'same:a,b': {
+		valid: [
+			{ subject: 'x', a: 'x', b: 'x' }
+		],
+		invalid: [
+			{ subject: 'x', a: 'x', b: 'y' },
+			{ subject: 'x', a: 'y', b: 'x' },
+			{ subject: 'x', a: 'y', b: 'y' },
+			{ subject: 'x', a: 'x' }
+		]
+	},
+	'different:other': {
+		valid: [
+			{ subject: 'x', other: 'y' },
+			{ subject: 'x', other: 'X' },
+			{ subject: 1, other: '1' },
+			{ subject: 0, other: false },
+			{ subject: 'x' }
+		],
+		invalid: [
+			{ subject: 'x', other: 'x' },
+			{ subject: 1, other: 1 },
+			{ subject: '', other: '' },
+			{ subject: null, other: null }
+		]
+	},
+	'different:a,b': {
+		valid: [
+			{ subject: 'x', a: 'y', b: 'z' }
+		],
+		invalid: [
+			{ subject: 'x', a: 'x', b: 'z' },
+			{ subject: 'x', a: 'y', b: 'x' },
+			{ subject: 'x', a: 'y', b: 'y' }
+		]
+	},
+	'required_with:other': {
+		valid: [
+			{ subject: 'x', other: 'set' },
+			{ subject: 0, other: 'set' },
+			{ subject: false, other: 'set' },
+			{ subject: '' },
+			{ subject: '', other: null },
+			{ subject: '', other: undefined }
+		],
+		invalid: [
+			{ subject: '', other: 'set' },
+			{ subject: null, other: 'set' },
+			{ subject: undefined, other: 'set' },
+			{ other: 'set' }
+		]
+	},
 	'required_if:gender,unspecified': {
 		valid: [
 			{ gender: 'unspecified', subject: 'x' },
