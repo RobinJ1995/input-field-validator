@@ -1,7 +1,19 @@
-const FieldValidator = require('./FieldValidator');
+import FieldValidator = require('./FieldValidator');
+import type * as types from './types';
 
-class Validator {
-	constructor(input, rules) {
+class Validator<TInput extends object = types.ValidationInput> {
+	valid: boolean | null;
+	errors: string[];
+	fieldErrors: types.FieldError[];
+
+	reverse: boolean;
+
+	input: TInput;
+	rules: types.ValidationRules;
+
+	static readonly FieldValidator = FieldValidator;
+
+	constructor(input: TInput, rules: types.ValidationRules) {
 		this.valid = null;
 		this.errors = [];
 		this.fieldErrors = [];
@@ -12,16 +24,16 @@ class Validator {
 		this.rules = rules;
 	}
 
-	validate() {
+	validate(): boolean {
 		let valid = true;
 		this.errors = [];
 
 		for (const field in this.rules) {
-			const fieldValidator = new FieldValidator(field, this.input[field], this.rules[field], this.input);
+			const fieldValidator = new FieldValidator(field, (this.input as types.ValidationInput)[field], this.rules[field], this.input);
 
 			if (!fieldValidator.validate() && !this.reverse) {
 				valid = false;
-				this.errors.push(fieldValidator.error);
+				this.errors.push(fieldValidator.error as string);
 				this.fieldErrors.push
 				(
 					{
@@ -48,6 +60,4 @@ class Validator {
 	}
 }
 
-Validator.FieldValidator = FieldValidator;
-
-module.exports = Validator;
+export = Validator;

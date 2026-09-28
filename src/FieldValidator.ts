@@ -1,7 +1,20 @@
-const { validate: validateUuid } = require('uuid');
+import { validate as validateUuid } from 'uuid';
+import { FieldRules, NestedRules, Rule, ValidationInput } from './types';
 
-module.exports = class FieldValidator {
-	constructor(name, value, rules, input, cosmeticName) {
+class FieldValidator {
+	valid: boolean | null;
+	fieldName: string | null;
+	private _fieldErrorRaw: string | null;
+	fieldError: string | null;
+	error: string | null;
+
+	name: string;
+	cosmeticName: string;
+	value: any;
+	rules: Array<Rule | NestedRules>;
+	input: ValidationInput;
+
+	constructor(name: string, value: any, rules: FieldRules, input?: ValidationInput, cosmeticName?: string) {
 		this.valid = null;
 		this.fieldName = null;
 		this._fieldErrorRaw = null;
@@ -11,15 +24,12 @@ module.exports = class FieldValidator {
 		this.name = name;
 		this.cosmeticName = cosmeticName ?? name;
 		this.value = value;
-		this.rules = rules;
-		this.input = input;
-
-		if (this.rules.constructor !== Array)
-			this.rules = [this.rules];
+		this.rules = Array.isArray(rules) ? rules : [rules];
+		this.input = input as ValidationInput;
 	}
 
-	validate() {
-		for (const rule of this.rules) {
+	validate(): boolean {
+		for (const rule of this.rules as any[]) {
 			if (rule.constructor !== String) {
 				const innerInput = this.input[this.name];
 
@@ -32,7 +42,7 @@ module.exports = class FieldValidator {
 					if (!innerFieldValidator.validate()) {
 						return this.invalid(
 							innerFieldValidator.fieldName ?? innerFieldValidator.cosmeticName,
-							innerFieldValidator._fieldErrorRaw);
+							innerFieldValidator._fieldErrorRaw as string);
 					}
 				}
 
@@ -47,7 +57,7 @@ module.exports = class FieldValidator {
 
 			switch (name) {
 				case 'array':
-					if (this.value && this.value.constructor === Array) {
+					if (Array.isArray(this.value)) {
 						if (this.rules.includes('required') && this.value.length === 0)
 							this.invalid(null, 'must not be empty');
 
@@ -55,7 +65,7 @@ module.exports = class FieldValidator {
 						for (let i = 0; i < this.value.length; i++) {
 							const itemValidator = new FieldValidator(`${this.name}.${i}`, this.value[i], itemRules);
 							if (!itemValidator.validate()) {
-								return this.invalid(null, itemValidator.fieldError);
+								return this.invalid(null, itemValidator.fieldError as string);
 							}
 						}
 					} else {
@@ -125,7 +135,7 @@ module.exports = class FieldValidator {
 					if (this.getConstructorName(value) === 'Number')
 						value = String(value);
 
-					if (this.getValueLength(value) === null || this.getValueLength(value) > parseInt(parts[1]))
+					if (this.getValueLength(value) === null || (this.getValueLength(value) as number) > parseInt(parts[1]))
 						return this.invalid(null, 'must be no more than ' + parts[1] + ' characters long');
 
 					break;
@@ -133,13 +143,13 @@ module.exports = class FieldValidator {
 					if (this.getConstructorName(value) === 'Number')
 						value = String(value);
 
-					if (this.getValueLength(value) === null || this.getValueLength(value) < parseInt(parts[1]))
+					if (this.getValueLength(value) === null || (this.getValueLength(value) as number) < parseInt(parts[1]))
 						return this.invalid(null, 'must be at least ' + parts[1] + ' characters long');
 
 					break;
 				case 'in':
 					let options = parts[1].split(',');
-					if (['Number', 'Boolean'].includes(this.getConstructorName(value)))
+					if (['Number', 'Boolean'].includes(this.getConstructorName(value) as string))
 						value = String(value);
 
 					if (!options.includes(value))
@@ -254,7 +264,7 @@ module.exports = class FieldValidator {
 				case 'distinct':
 					let duplicates = value.filter
 					(
-						(val1, i) => {
+						(val1: any, i: any) => {
 							let spliced = [...value];
 							spliced.splice(i, 1);
 
@@ -337,7 +347,7 @@ module.exports = class FieldValidator {
 		return true;
 	}
 
-	invalid(fieldName, message) {
+	invalid(fieldName: string | null, message: string): false {
 		this.valid = false;
 		this.fieldName = fieldName;
 		this._fieldErrorRaw = message;
@@ -347,7 +357,7 @@ module.exports = class FieldValidator {
 		return false;
 	}
 
-	getConstructorName(value) {
+	getConstructorName(value: any): string | null {
 		if (value === null
 			|| value === undefined) {
 			return null;
@@ -356,7 +366,7 @@ module.exports = class FieldValidator {
 		return value.constructor.name;
 	}
 
-	getValueLength(value) {
+	getValueLength(value: any): number | null {
 		if (value === null
 			|| value === undefined
 			|| this.getConstructorName(value.length) !== 'Number') {
@@ -366,6 +376,8 @@ module.exports = class FieldValidator {
 		return value.length;
 	}
 }
+
+export = FieldValidator;
 
 // While Javascript doesn't have proper unicode regex support yet... //
 // /^[\p{L}\p{M}]+$/u //

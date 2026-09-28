@@ -1,8 +1,8 @@
-const { v1: uuid1, v4: uuid4, v5: uuid5 } = require('uuid');
+import { v1 as uuid1, v4 as uuid4, v5 as uuid5 } from 'uuid';
 
-let Validator = require ('../Validator');
+import Validator = require('../src/Validator');
 
-let tests = {
+let tests: Record<string, { valid: any[], invalid: any[] }> = {
 	'integer': {
 		valid: [ 0, 1, 2, 10, 11, 9999999, -1, -5, -10, -1e+22, 9007199254740991, -9007199254740991, '465', '-612' ],
 		invalid: [ undefined, null, 0.01, 1.01, 9999999.999999998, -1.5, -5.9999, 'a', '0e5', -9999999.999999998, 'zero', 'one', 'true', 'false', true, false, { '0': 1 }, [ 1 ], [ 'a' ], '0xFFF' ]
@@ -25,7 +25,7 @@ let tests = {
 	},
 	'length:3': {
 		valid: [ [0, 1, 2], 222, '123', 'abc' ],
-		invalid: [ undefined, null, [0, 1, 2, 3], 1234, 01, 'ab', 'abcd', { 0: 0, 1: 1, 2: 2 } ]
+		invalid: [ undefined, null, [0, 1, 2, 3], 1234, 0o1, 'ab', 'abcd', { 0: 0, 1: 1, 2: 2 } ]
 	},
 	'maxlength:3': {
 		valid: [ [0, 1, 2], 222, '123', 'abc', 'ab', 'a' ],
@@ -33,7 +33,7 @@ let tests = {
 	},
 	'minlength:3': {
 		valid: [ [0, 1, 2], 222, '123', 'abc', 'abcd', [0, 1, 2, 3, 4, 5] ],
-		invalid: [ undefined, null, [0, 1], 12, 01, 'ab', { 0: 0, 1: 1, 2: 2 } ]
+		invalid: [ undefined, null, [0, 1], 12, 0o1, 'ab', { 0: 0, 1: 1, 2: 2 } ]
 	},
 	'in:0,false,joske,50': {
 		valid: [ '0', 0, false, 'false', 'joske', 50, '50' ],
@@ -209,7 +209,7 @@ let tests = {
 			false,
 			0,
 			1,
-			{ 'a': 0 }
+			{ 'a': 0 },
 			['something'],
 			['{"a": 0}'],
 			'*',
@@ -343,7 +343,7 @@ for (const rule in tests)
 	});
 }
 
-function getValueType(value)
+function getValueType(value: any): string
 {
 	if (value === null || value === undefined || !value.constructor)
 		return 'lang';
