@@ -183,8 +183,9 @@ class FieldValidator {
 
 					break;
 				case 'required_if':
-					if ((this.input[parts[1]] == parts[2]) && (value === null || value === undefined || value === ''))
-						return this.invalid(null, 'is required if ' + parts[1] + ' is ' + parts[2]);
+					let [otherField, otherValue] = parts[1].split(',');
+					if ((this.input[otherField] == otherValue) && (value === null || value === undefined || value === ''))
+						return this.invalid(null, 'is required if ' + otherField + ' is ' + otherValue);
 
 					break;
 				case 'lowercase':
