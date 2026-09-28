@@ -1,0 +1,32 @@
+name: Test
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['14', '16', '18', '20', '22', '24', '26', 'latest']
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+
+      - run: npm ci
+
+      # mocha needs 18.18+, so on older versions just check the build loads.
+      - run: node -e "require('./dist/Validator')"
+        if: matrix.node == '14' || matrix.node == '16'
+
+      - run: npm test
+        if: matrix.node != '14' && matrix.node != '16'
