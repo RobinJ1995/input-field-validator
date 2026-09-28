@@ -1,6 +1,6 @@
-const { v4: uuid } = require('uuid');
+import { v4 as uuid } from 'uuid';
 
-let Validator = require ('../Validator');
+import Validator = require('../src/Validator');
 
 describe('Nested field validation', () => {
 	it('Nested field validation', done => {
@@ -168,7 +168,7 @@ describe('Nested field validation', () => {
 		} else if (validator.valid !== false) {
 			done('validate() returned false but valid !== false');
 			return;
-		} else if (validator.errors == ['x.x.x.x.y.x.x.x.x.x.x.x.x.x.id must be a valid UUID']) {
+		} else if (validator.errors.join(', ') !== 'x.x.x.x.y.x.x.x.x.x.x.x.x.x.id must be a valid UUID') {
 			done('Validation error should be: x.x.x.x.y.x.x.x.x.x.x.x.x.x.id must be a valid UUID');
 			return;
 		} else if (validator.fieldErrors[0].error !== 'Must be a valid UUID') {
