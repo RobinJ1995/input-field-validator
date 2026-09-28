@@ -24,7 +24,7 @@ class FieldValidator {
 		this.name = name;
 		this.cosmeticName = cosmeticName ?? name;
 		this.value = value;
-		this.rules = Array.isArray(rules) ? rules : [rules];
+		this.rules = Array.isArray(rules) ? [...rules] : [rules];
 		this.input = input as ValidationInput;
 	}
 
