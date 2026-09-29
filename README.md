@@ -1,6 +1,8 @@
-# Input Field Validator [![Build Status](https://travis-ci.org/RobinJ1995/input-field-validator.svg?branch=master)](https://travis-ci.org/RobinJ1995/input-field-validator)
+# Input Field Validator [![Test](https://github.com/RobinJ1995/input-field-validator/actions/workflows/test.yml/badge.svg)](https://github.com/RobinJ1995/input-field-validator/actions/workflows/test.yml)
 
-A Javascript input validation library heavily inspired by [Laravel's input validation](https://laravel.com/docs/5.4/validation).
+A JavaScript port of [Laravel's validation](https://laravel.com/docs/12.x/validation). The rules, their parameters, the
+order in which they run and the error messages behave exactly like Laravel 12's `Illuminate\Validation\Validator`,
+verified against 1500 cases lifted from Laravel's own test suite.
 
 ## Example
 
@@ -10,18 +12,18 @@ const Validator = require('input-field-validator');
 const validation = new Validator(
 	req.body,
 	{
-		first_name: ['required', 'minlength:3'],
-		last_name: ['required', 'minlength:3'],
-		username: ['required', 'minlength:3', 'lowercase'],
+		first_name: ['required', 'min:3'],
+		last_name: 'required|min:3',
+		username: ['required', 'min:3', 'lowercase', 'alpha_dash'],
 		email: ['required', 'email', 'lowercase'],
-		password: ['required', 'minlength:8'],
-		password_confirm: ['required', 'same:password'],
-		dob: ['required', 'date:before:2010-01-01'],
+		password: ['required', 'min:8', 'confirmed'],
+		dob: ['required', 'date', 'before:2010-01-01'],
 		gender: ['required', 'in:male,female,unspecified'],
-		tags: ['optional', 'array', 'minlength:3', 'maxlength:32'],
+		tags: ['nullable', 'array', 'max:32'],
+		'tags.*': 'string|min:3',
 		location: {
-		    country: ['required', 'minlength:3'],
-			city: ['optional', 'minlength:3']
+			country: ['required', 'size:2'],
+			city: ['nullable', 'min:3']
 		}
 	}
 );
@@ -30,45 +32,64 @@ if (!validation.validate ())
 	throw new Error(validation.errors.join (', '));
 ```
 
-## Available validators
+Rules can be given as a pipe-delimited string or an array, exactly as in Laravel. Nested input is addressed with dot
+notation (`'location.country'`) and wildcards (`'tags.*'`); nesting the rules object as in the example above is a
+shorthand for the dotted form.
 
-* `array`
-* `required`
-* `optional`
-* `integer`
-* `number`
-* `email`
-* `url`
-* `length` (`length:3` checks if the input string is exactly 3 characters long)
-* `maxlength` (`minlength:3` checks if the input string is at least 3 characters long)
-* `minlength` (`maxlength:8` checks if the input string is at most 8 characters long)
-* `in` (`in:joske,maria,piet` checks if the input string is equal to either `joske`, `maria` or `piet`)
-* `same` (`same:password_confirmation` checks if the value is equal to the value of the `password_confirmation` field)
-* `different` (`different:old_password` checks if the value is different from the value of the `old_password` field)
-* `required_with` (`required_with:old_password` makes the field required if the `old_password` field is present in the input)
-* `required_if` (`required_if:gender,unspecified` makes the field required if the `gender` field is is equal to `unspecified`)
-* `lowercase` (checks if the input string consists entirely of lower case characters)
-* `uppercase` (checks if the input string consists entirely of upper case characters)
-* `alpha` (alphabetic characters)
-* `alpha_num` (alphanumeric characters)
-* `alpha_dash` (alphanumeric characters, dashes and underscores)
-* `date` (checks if the input is a valid date)
-* `date:before` (`date:before:now` checks if the input date is in the past, `date:before:1995-02-03` checks if the input date is before the 3rd of February 1995)
-* `date:after` (`date:before:now` checks if the input date is in the past, `date:after:1995-02-03` checks if the input date is after the 3rd of February 1995)
-* `date:equal` (`date:before:now` checks if the input date is today's date, `date:equal:1995-02-03` checks if the input date is the 3rd of February 1995)
-* `boolean` (checks if the input is a boolean value; accepted values are true, false, 0, 1, "true", "false", "0" and "1")
-* `object` (checks if the input is an object)
-* `distinct` (checks that the field's value is not present anywhere else in the input)
-* `ip` (checks that the field's value is either a valid IPv4 or IPv6 address)
-* `ipv4` (checks that the field's value is a valid IPv4 address)
-* `ipv6` (checks that the field's value is a valid IPv6 address)
-* `json`: Checks that the field's value is a valid JSON string
-    * Values with leading or trailing whitespace are considered valid (they will be automatically trimmed)
-	* Both JSON objects and JSON arrays are considered valid
-	* Empty JSON objects (`{}`) and JSON arrays (`[]`) are considered valid
-	* While `"hello world"`, `1` and `true` (string literals, numbers and booleans) are technically valid JSON, this validator is meant to check specifically whether something is a JSON object or a JSON array, and as such for the purpose of this validator they are considered to be invalid.
-* `regex` (tests the input value against the given regular expression)
-	* Example: `regex:^[a-z\-]{5,}$`
-* `uuid` (checks whether the input value is an RFC 4122 compliant UUID)
+## Results
 
-Nested validation is also supported by simply providing an object with keys matching the map in the input, and their validation rules. See the `location` field in the example above.
+After `validate()` (alias of `passes()`; `fails()` is the inverse):
+
+* `validation.valid` – `true` or `false`
+* `validation.errors` – every message, in order (`$validator->errors()->all()` in Laravel)
+* `validation.messages` – messages keyed by attribute (`$validator->errors()->toArray()`)
+* `validation.fieldErrors` – `[{ field, error }, ...]`
+* `validation.failed()` – the failed rules and their parameters, keyed by attribute
+* `validation.validated()` – the validated input only; throws `Validator.ValidationError` if validation failed
+
+Messages are Laravel's English ones, e.g. `The first name field is required.`. Custom messages and attribute names use
+Laravel's formats:
+
+```js
+new Validator(input, rules,
+	{ 'email.required': 'We need your :attribute.', min: { string: ':attribute is too short' } },
+	{ email: 'e-mail address' });
+```
+
+## Rules
+
+Every rule from the [Laravel docs](https://laravel.com/docs/12.x/validation#available-validation-rules) is
+implemented with the same parameters and semantics, including `bail`, `nullable`, `sometimes`, the `required_*`,
+`prohibited_*`, `present_*`, `missing_*` and `exclude_*` families, `gt`/`gte`/`lt`/`lte`, size rules that switch
+between string length, numeric value and array count based on the other rules on the field, `date`/`date_format`/
+`before`/`after` with PHP's date grammar (`tomorrow`, `+1 week`, `10/04/2017`, ...), `regex` with PHP delimiters and
+modifiers (`regex:/^[a-z]+$/i`), `distinct`, `in_array`, `confirmed`, `timezone`, `uuid:4`, `ulid`, `decimal`,
+`multiple_of`, and so on.
+
+Behaviour worth knowing, because it is Laravel's:
+
+* A missing key or an empty string only fails implicit rules such as `required`; `null` fails type rules unless the
+  field is `nullable`.
+* Once an implicit rule fails, the other rules on that field are skipped. Otherwise every failing rule produces a
+  message; `bail` stops at the first.
+* `min:3` on the number `20` checks the string length unless the field also has `numeric`, `integer` or `decimal`.
+* `boolean` accepts `true`, `false`, `0`, `1`, `'0'` and `'1'`; `accepted` accepts `yes`, `on`, `1`, `'1'`, `true`,
+  `'true'`.
+* A plain object counts as an array (PHP has only arrays); `list` demands a real array.
+
+Not available, since they need PHP infrastructure: `exists`, `unique`, `current_password`, `enum`, `encoding`,
+`active_url` and the `dns`/`spoof` email checks throw. The file rules (`file`, `image`, `mimes`, `mimetypes`,
+`extensions`, `dimensions`) always fail, as Laravel's do for non-file input.
+
+## Extending
+
+```js
+Validator.extend('even', (attribute, value, parameters, validator) => value % 2 === 0, 'The :attribute field must be even.');
+
+new Validator(input, {
+	count: ['even', (attribute, value, fail) => { if (value > 100) fail('The :attribute field is too big.'); }]
+});
+```
+
+`Validator.extendImplicit`, `Validator.extendDependent` and `Validator.replacer` mirror their Laravel counterparts, as
+do `validator.sometimes()`, `validator.after()` and `validator.stopOnFirstFailure()`.
