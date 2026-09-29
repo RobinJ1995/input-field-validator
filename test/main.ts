@@ -1,367 +1,247 @@
-import { v1 as uuid1, v4 as uuid4, v5 as uuid5 } from 'uuid';
+process.env.TZ = 'UTC';
 
+import assert from 'assert';
 import Validator = require('../src/Validator');
 
-let tests: Record<string, { valid: any[], invalid: any[] }> = {
-	'integer': {
-		valid: [ 0, 1, 2, 10, 11, 9999999, -1, -5, -10, -1e+22, 9007199254740991, -9007199254740991, '465', '-612' ],
-		invalid: [ undefined, null, 0.01, 1.01, 9999999.999999998, -1.5, -5.9999, 'a', '0e5', -9999999.999999998, 'zero', 'one', 'true', 'false', true, false, { '0': 1 }, [ 1 ], [ 'a' ], '0xFFF' ]
-	},
-	'int': {
-		valid: [ 0, 1, -1, 10, 9007199254740991, -9007199254740991, '465', '-612' ],
-		invalid: [ undefined, null, 0.01, -1.5, 'a', '0e5', 'zero', true, false, { '0': 1 }, [ 1 ], '0xFFF' ]
-	},
-	'number': {
-		valid: [ 0, 1, 2, 10, 11, 9999999, -1, -5, -10, -1e+22, 9007199254740991, -9007199254740991, '465', '-612', 0.01, 1.01, 9999999.999999998, -1.5, -5.9999, -9999999.999999998 ],
-		invalid: [ undefined, null, 'a', '0e5', 'zero', 'one', 'true', 'false', true, false, { '0': 1 }, [ 1 ], [ 'a' ], '0xFFF' ]
-	},
-	'string': {
-		valid: [ '0', '1', new String (2), '10', 'true', 'false', 'abc' ],
-		invalid: [ undefined, null, 0, true, false, 9007199254740991, { '0': 1 }, { hello: 'world' }, [ 'yo!' ], [ 'a' ], 4095 ]
-	},
-	'email': {
-		valid: [ 'x@x.xx', 'joske@joske.be', 'valid.email+address@gmail.com'],
-		invalid: [ undefined, null, 0, true, false, 9007199254740991, { '0': 1 }, { hello: 'world' }, [ 'yo@derp.com' ], [ 'yo!' ], 4095, 'x@x.x' ]
-	},
-	'url': {
-		valid: [ 'http://google.com', 'http://google.com/', 'https://google.com', 'https://google.com/', 'http://ko.wikipedia.org/wiki/위키백과:대문?test=yes'],
-		invalid: [ undefined, null, 'ftp://x@derp.com', 'google.com', 'http://google', 0, true, false, 9007199254740991, { '0': 1 }, { hello: 'world' }, [ 'yo@derp.com' ], [ 'yo!' ], 4095, 'x@x.x' ]
-	},
-	'length:3': {
-		valid: [ [0, 1, 2], 222, '123', 'abc' ],
-		invalid: [ undefined, null, [0, 1, 2, 3], 1234, 0o1, 'ab', 'abcd', { 0: 0, 1: 1, 2: 2 } ]
-	},
-	'maxlength:3': {
-		valid: [ [0, 1, 2], 222, '123', 'abc', 'ab', 'a' ],
-		invalid: [ undefined, null, [0, 1, 2, 3], 1234, 'abcd', { 0: 0, 1: 1, 2: 2 } ]
-	},
-	'minlength:3': {
-		valid: [ [0, 1, 2], 222, '123', 'abc', 'abcd', [0, 1, 2, 3, 4, 5] ],
-		invalid: [ undefined, null, [0, 1], 12, 0o1, 'ab', { 0: 0, 1: 1, 2: 2 } ]
-	},
-	'in:0,false,joske,50': {
-		valid: [ '0', 0, false, 'false', 'joske', 50, '50' ],
-		invalid: [ undefined, null, [0, 1], [0], [ false ], [ 'false' ], { 0: false }, { '0': 0 }, 'joske0', 'fifty' ]
-	},
-	// same //
-	// different //
-	// required_with //
-	// required_if //
-	'lowercase': {
-		valid: [ '0', '1', new String (2), '10', 'true', 'false', 'abc', 'lorem ipsum' ],
-		invalid: [ undefined, null, 0, true, false, 9007199254740991, { '0': 1 }, { hello: 'world' }, [ 'yo!' ], [ 'a' ], 409, 5, 'UPPERCASE STRING', 'Joske' ]
-	},
-	'uppercase': {
-		valid: [ '0', '1', new String (2), '10', 'TRUE', 'FALSE', 'ABC', 'LOREM IPSUM' ],
-		invalid: [ undefined, null, 0, true, false, 9007199254740991, { '0': 1 }, { HELLO: 'WORLD' }, [ 'YO!' ], [ 'A' ], 409, 5, 'lowercase string', 'Joske' ]
-	},
-	'alpha': {
-		valid: [ 'AbcD', 'aaaaaaaaaaaaaaaaaaaa', new String ('NOOTNOOT'), 'TRUE', 'FALSE', 'ABC', 'LÖRẼMÏPSÚM', 'Knödel', 'Hé', 'nĭhăo' ],
-		invalid: [ undefined, null, 0, true, false, 9007199254740991, { '0': 1 }, { HELLO: 'WORLD' }, [ 'YO!' ], [ 'A' ], 409, 5, 'hello@example', 'how are you', 'hello123', '1+1=2', 'a.b', '1.25', '1,25', '1-2', 'A-z', '0_o' ]
-	},
-	'alpha_num': {
-		valid: [ 'AbcD', 'aaaaaaaaaaaaaaaaaaaa', new String ('NOOTNOOT'), 'TRUE', 'FALSE', 'ABC', 'LÖRẼMÏPSÚM', 'Knödel', 'Hé', 'nĭhăo', 'hello123' ],
-		invalid: [ undefined, null, 0, true, false, 9007199254740991, { '0': 1 }, { HELLO: 'WORLD' }, [ 'YO!' ], [ 'A' ], 409, 5, 'hello@example', 'how are you', '1+1=2', 'a.b', '1.25', '1,25', '1-2', 'A-z', '0_o' ]
-	},
-	'alpha_dash': {
-		valid: [ 'AbcD', 'aaaaaaaaaaaaaaaaaaaa', new String ('NOOTNOOT'), 'TRUE', 'FALSE', 'ABC', 'LÖRẼMÏPSÚM', 'Knödel', 'Hé', 'nĭhăo', '1-2', 'A-z', '0_o' ],
-		invalid: [ undefined, null, 0, true, false, 9007199254740991, { '0': 1 }, { HELLO: 'WORLD' }, [ 'YO!' ], [ 'A' ], 409, 5, 'hello@example', 'how are you', '1+1=2', 'a.b', '1.25', '1,25' ]
-	},
-	'date': {
-		valid: [ '2017-10-04', '9999-12-31', '2017-09-30', '2017-08-31' ],
-		invalid: [ undefined, null, '04-10-2017', '31-09-2017', '45-85-3528', '3528-85-45', '1-02-31', 'Wednesday the 4th of October, 2017', '2017/10/04', '2017.10.04', '1-1-1', '2099-1-2', '2099-01-2', '2099-1-02', '2017-10-00', '2017-0-0', '2017-10-0' ]
-	},
-	'date:before:2017-10-04': {
-		valid: [ '2017-10-03', '2017-09-30', '1995-02-03' ],
-		invalid: [ undefined, null, '04-10-2017', '05-10-2017', '31-09-2018', '45-85-3528', '3528-85-45', '1-02-31', 'Wednesday the 4th of October, 2017', '2017/10/04', '2017.10.04', '1-1-1', '2099-1-2', '2099-01-2', '2099-1-02', '2017-10-00', '2017-0-0', '2017-10-0' ]
-	},
-	'date:after:2017-10-04': {
-		valid: [ '2017-10-05', '9999-12-31', '2017-11-30' ],
-		invalid: [ undefined, null, '04-10-2017', '31-09-2017', '45-85-3528', '3528-85-45', '1-02-31', 'Wednesday the 4th of October, 2017', '2017/10/00', '2017.10.04', '1-1-1', '2099-1-2', '2099-01-2', '2099-1-02', '2017-08-31', '2017-10-00', '2017-0-0', '2017-10-0' ]
-	},
-	'date:equal:2017-10-04': {
-		valid: [ '2017-10-04', new Date ('2017-10-04') ],
-		invalid: [ undefined, null, '04-10-2017', '31-09-2017', '45-85-3528', '3528-85-45', '1-02-31', 'Wednesday the 4th of October, 2017', '2017/10/04', '2017.10.04', '1-1-1', '2099-1-2', '2099-01-2', '2099-1-02', '9999-12-31', '2017-09-30', '2017-08-31', '2017-10-00', '2017-0-0', '2017-10-0' ]
-	},
-	'date:after:now': {
-		valid: [ new Date('9999-12-31') ],
-		invalid: [ undefined, null, new Date('2017-10-03'), '2017-10-03' ]
-	},
-	'boolean': {
-		valid: [ true, false, 'true', 'false', 0, 1, '0', '1' ],
-		invalid: [ undefined, null, new Date('2017-10-03'), '2017-10-03', 'yes', 'no', '', 'herpederp', 2, -1, 111, 100, 1.1, {}, [] ]
-	},
-	'bool': {
-		valid: [ true, false, 'true', 'false', 0, 1, '0', '1' ],
-		invalid: [ undefined, null, 'yes', 'no', '', 'herpederp', 2, -1, 1.1, {}, [] ]
-	},
-	'required': {
-		valid: [ 0, 1, -1, '0', 'a', ' ', true, false, [], {}, new Date () ],
-		invalid: [ undefined, null, '' ]
-	},
-	'optional': {
-		valid: [ undefined, null, '', 0, 1, false, true, 'a', [], {}, new Date () ],
-		invalid: []
-	},
-	'object': {
-		valid: [ {}, { key: 'value' }, new Date () ],
-		invalid: [ undefined, null, '2017-10-03', 'yes', 'no', '', 'herpederp', 2, -1, 111, 100, 1.1, true, false, 'true', 'false', 0, 1, '0', '1', [], [1, '2', 'three'] ]
-	},
-	'distinct': {
-		valid: [
-			[ 1, 'joske', '1', [ 1 ], { value: 1 }, new Date () ],
-			[ new Date ('2017-11-02'), '2017-11-02' ],
-			[ true, 'true' ],
-			[ false, 'false', 0 ]
-		],
-		invalid: [
-			[ '1', '1' ],
-			[ 1, 1 ],
-			[ 0, 0 ],
-			[ new Date ('2017-11-02'), new Date ('2017-11-02') ],
-			[ 'NOOT NOOT', 'NOOT NOOT' ],
-			[ {}, {} ],
-			[ { key: 'value' }, { key: 'value' } ],
-			[ 1.0, 1 ],
-			[ `x`, new String ('x') ],
-			[ "x", `x` ],
-			[ [ 1, 2, 3 ], [ 1, 2, 3 ] ],
-			[ { '1': 1, '2': 2, x: 'x' }, { '2': 2, x: 'x', '1': 1 } ]
-		]
-	},
-	'ip': {
-		valid: [
-			'0.0.0.1',
-			'255.255.255.254',
-			'127.0.0.1',
-			'188.226.180.226',
-			'0.0.0.0',
-			'255.255.255.255',
-			'2001:db8:3333:4444:5555:6666:7777:8888',
-			'2001:db8:3333:4444:CCCC:DDDD:EEEE:FFFF',
-			'::',
-			'2001:db8::',
-			'::1234:5678',
-			'2001:db8::1234:5678',
-			'2001:0db8:0001:0000:0000:0ab9:C0A8:0102',
-			'2001:db8:1::ab9:C0A8:102',
-			'2002:100::',
-			'AAAA::'
-		],
-		invalid: [
-			undefined,
-			null,
-			'127.0.0.256',
-			[],
-			{},
-			127,
-			true,
-			false,
-			0,
-			1,
-			['127.0.0.1'],
-			'*',
-			'127.0.0.1/24',
-			'QQQQ::'
-		]
-	},
-	'ipv4': {
-		valid: [ '0.0.0.1', '255.255.255.254', '127.0.0.1', '188.226.180.226', '0.0.0.0', '255.255.255.255' ],
-		invalid: [ undefined, null, '127.0.0.256', [], {}, 127, true, false, 0, 1, ['127.0.0.1'], '*', '127.0.0.1/24', '2001:db8:3333:4444:5555:6666:7777:8888', '::' ]
-	},
-	'ipv6': {
-		valid: [
-			// https://www.ibm.com/support/knowledgecenter/en/STCMML8/com.ibm.storage.ts3500.doc/opg_3584_IPv4_IPv6_addresses.html //
-			'2001:db8:3333:4444:5555:6666:7777:8888',
-			'2001:db8:3333:4444:CCCC:DDDD:EEEE:FFFF',
-			'::',
-			'2001:db8::',
-			'::1234:5678',
-			'2001:db8::1234:5678',
-			'2001:0db8:0001:0000:0000:0ab9:C0A8:0102',
-			'2001:db8:1::ab9:C0A8:102',
-			'2002:100::',
-			'AAAA::'
-		],
-		invalid: [
-			undefined,
-			null,
-			'127.0.0.256',
-			[],
-			{},
-			127,
-			true,
-			false,
-			0,
-			1,
-			['127.0.0.1'],
-			'*',
-			'127.0.0.1/24',
-			'127.0.0.1',
-			'QQQQ::'
-		]
-	},
-	'json': {
-		valid: [
-			'{}',
-			'{"a": 0}',
-			'{"a": "b"}',
-			'{"x": null}',
-			'[1, 2, 3]',
-			'["a", 2, null]',
-			'{"x": [1, null, "b"]}',
-			' {"a": 0}',
-			'{"a": 0} ',
-			'      {"a": 0}  												',
-		],
-		invalid: [
-			undefined,
-			null,
-			'127.0.0.256',
-			[],
-			{},
-			127,
-			true,
-			false,
-			0,
-			1,
-			{ 'a': 0 },
-			['something'],
-			['{"a": 0}'],
-			'*',
-			'127.0.0.1/24',
-			'127.0.0.1',
-			'QQQQ::',
-			'null',
-			'undefined',
-			'{a: 0}',
-			'{x: null}',
-			'{b: "x"}',
-			"{'a': 0}",
-			'{"a": 0},',
-			'"hello world"',
-			',{"a": 0}',
-			'{"a": 0},',
-			'1',
-			'true'
-		]
-	},
-	'regex:^[a-z\-]{5,}$': {
-		valid: [
-			'asdsa-d-xsc-dx-b-dtfg-gh-fb-gc--gh-',
-			'-------',
-			'aaaaaaaaaaaaaaaaaaaaaaaaaaa',
-			'a-a-a',
-		],
-		invalid: [
-			undefined,
-			null,
-			'127.0.0.256',
-			[],
-			{},
-			127,
-			true,
-			false,
-			0,
-			1,
-			['127.0.0.1'],
-			'*',
-			'127.0.0.1/24',
-			'127.0.0.1',
-			'QQQQ::',
-			'a',
-			'----',
-			'aaaa',
-			'aaaaaaaaaaa0aaaaaa',
-		]
-	},
-	'uuid': {
-		valid: [
-			'd541dcbd-f4ee-45ff-a8dc-c9230646e106',
-			'00000000-0000-0000-0000-000000000000',
-			uuid1(), uuid4(), uuid1(), uuid4(), uuid1(), uuid4(), uuid1(), uuid4(), uuid1(), uuid4(), uuid1(), uuid4(),
-			uuid1(), uuid4(), uuid1(), uuid4(), uuid1(), uuid4(), uuid1(), uuid4(), uuid1(), uuid4(), uuid1(), uuid4()
-		],
-		invalid: [
-			' d541dcbd-f4ee-45ff-a8dc-c9230646e106',
-			'd541dcbd-f4ee-45ff-a8dc-c9230646e106 ',
-			' d541dcbd-f4ee-45ff-a8dc-c9230646e106 ',
-			'd541dcbd-f4ee-45ff-a8dc-c9230646e10',
-			'541dcbd-f4ee-45ff-a8dc-c9230646e106',
-			'd541dcbd-f4e-45ff-a8dc-c9230646e106',
-			'd541dcbd-f4ee-45f-a8dc-c9230646e106',
-			'd541dcbd-f4ee-45ff-a8c-c9230646e106',
-			'd541dcbda-f4ee-45ff-a8dc-c9230646e106',
-			'd541dcbd-f4eea-45ff-a8dc-c9230646e106',
-			'd541dcbd-f4ee-45ffa-a8dc-c9230646e106',
-			'd541dcbd-f4ee-45ff-a8dca-c9230646e106',
-			'd541dcbd-f4ee-45ff-a8dc-c9230646e106a',
-			'd541dcbda-f4eea-45ffa-a8dca-c9230646e106a',
-			'ffffffff-ffff-ffff-ffff-ffffffffffff',
-			'FFFFFFFF-FFFF-FFFF-FFFF-FFFFFFFFFFFF',
-			'0-0-0-0-0',
-			'0',
-			'd541dcbd-f4ee-45ff-a8dc-g9230646e106',
-			undefined,
-			null,
-			[],
-			{},
-			127,
-			true,
-			false,
-			0,
-			1,
-			0x8,
-			['d541dcbd-f4ee-45ff-a8dc-c9230646e106']
-		]
-	}
-};
+describe('README example', () => {
+	const rules = {
+		first_name: ['required', 'min:3'],
+		last_name: 'required|min:3',
+		username: ['required', 'min:3', 'lowercase'],
+		email: ['required', 'email', 'lowercase'],
+		password: ['required', 'min:8', 'confirmed'],
+		dob: ['required', 'date', 'before:2010-01-01'],
+		gender: ['required', 'in:male,female,unspecified'],
+		tags: ['nullable', 'array', 'max:32'],
+		'tags.*': 'string|min:3',
+		location: {
+			country: ['required', 'size:2'],
+			city: ['nullable', 'min:3'],
+		},
+	};
 
-for (const rule in tests)
-{
-	describe(rule, () => {
-		const { valid, invalid } = tests[rule];
+	it('accepts valid input', () => {
+		const validation = new Validator({
+			first_name: 'Robin', last_name: 'Jacobs', username: 'robin', email: 'robin@example.com',
+			password: 'hunter2hunter2', password_confirmation: 'hunter2hunter2', dob: '1995-02-03', gender: 'unspecified',
+			tags: ['one', 'two'], location: { country: 'IE', city: null },
+		}, rules);
 
-		valid.forEach(validValue => {
-			const key = getValueType(validValue) + '::' + String(validValue);
-			it(`"${validValue}" should be valid according to rule "${rule}"`, done => {
-				const validator = new Validator({
-					[key]: validValue
-				}, {
-					[key]: [rule]
-				});
-				if (validator.validate()) {
-					done();
-					return;
-				}
+		assert.strictEqual(validation.validate(), true);
+		assert.strictEqual(validation.valid, true);
+		assert.deepStrictEqual(validation.errors, []);
+	});
 
-				done(validator.errors);
-			});
+	it('reports every failing rule with Laravel wording', () => {
+		const validation = new Validator({
+			first_name: 'R', username: 'Robin', email: 'nope', password: 'short', password_confirmation: 'other',
+			dob: '2015-01-01', gender: 'x', tags: ['a', 1], location: { country: 'IRL' },
+		}, rules);
+
+		assert.strictEqual(validation.validate(), false);
+		assert.deepStrictEqual(validation.errors, [
+			'The first name field must be at least 3 characters.',
+			'The last name field is required.',
+			'The username field must be lowercase.',
+			'The email field must be a valid email address.',
+			'The password field must be at least 8 characters.',
+			'The password field confirmation does not match.',
+			'The dob field must be a date before 2010-01-01.',
+			'The selected gender is invalid.',
+			'The location.country field must be 2 characters.',
+			'The tags.0 field must be at least 3 characters.',
+			'The tags.1 field must be a string.',
+			'The tags.1 field must be at least 3 characters.',
+		]);
+		assert.deepStrictEqual(validation.fieldErrors[0], { field: 'first_name', error: 'The first name field must be at least 3 characters.' });
+		assert.deepStrictEqual(validation.messages.password, [
+			'The password field must be at least 8 characters.',
+			'The password field confirmation does not match.',
+		]);
+		assert.deepStrictEqual(Object.keys(validation.failed().password), ['min', 'confirmed']);
+	});
+});
+
+describe('Custom messages and attribute names', () => {
+	it('uses inline messages, attribute names and size-aware messages', () => {
+		const v = new Validator({ email: '', age: 'x', items: [1] }, {
+			email: 'required',
+			age: 'integer',
+			items: 'array|min:2',
+		}, {
+			'email.required': 'Give us your :attribute!',
+			integer: 'Whole numbers only for :Attribute.',
+			min: { array: ':attribute needs :min or more entries' },
+		}, { email: 'e-mail address' });
+
+		assert.strictEqual(v.validate(), false);
+		assert.deepStrictEqual(v.errors, [
+			'Give us your e-mail address!',
+			'Whole numbers only for Age.',
+			'items needs 2 or more entries',
+		]);
+	});
+
+	it('replaces :other, :values, :date and :input placeholders', () => {
+		const v = new Validator({ a: 'x', b: 'x', c: '', d: 'late', role: 'admin', when: '2030-01-01' }, {
+			a: 'different:b',
+			c: 'required_if:role,admin',
+			d: 'in:early,on-time',
+			when: 'before:2020-01-01',
+		}, { in: ':input is not one of :values' });
+
+		assert.strictEqual(v.validate(), false);
+		assert.deepStrictEqual(v.errors, [
+			'The a field and b must be different.',
+			'The c field is required when role is admin.',
+			'late is not one of early, on-time',
+			'The when field must be a date before 2020-01-01.',
+		]);
+	});
+});
+
+describe('Wildcards, dots and nested rules', () => {
+	it('expands wildcards and reports implicit attributes verbatim', () => {
+		const v = new Validator({ users: [{ name: 'A', posts: [{ title: '' }] }, { name: '' }] }, {
+			'users.*.name': 'required|min:2',
+			'users.*.posts.*.title': 'required',
 		});
 
-		invalid.forEach(invalidValue => {
-			const key = getValueType(invalidValue) + '::' + String(invalidValue);
-			it(`"${invalidValue}" should be invalid according to rule "${rule}"`, done => {
-				const validator = new Validator({
-					[key]: invalidValue
-				}, {
-					[key]: [rule]
-				});
-				validator.reverse = true;
-				if (validator.validate()) {
-					done();
-					return;
-				}
-
-				done(validator.errors);
-			});
+		assert.strictEqual(v.validate(), false);
+		assert.deepStrictEqual(v.messages, {
+			'users.0.name': ['The users.0.name field must be at least 2 characters.'],
+			'users.0.posts.0.title': ['The users.0.posts.0.title field is required.'],
+			'users.1.name': ['The users.1.name field is required.'],
 		});
 	});
-}
 
-function getValueType(value: any): string
-{
-	if (value === null || value === undefined || !value.constructor)
-		return 'lang';
-	return value.constructor.name;
-}
+	it('treats nested rule objects as dotted keys', () => {
+		const v = new Validator({ a: { b: { c: 'x' } } }, { a: { b: { c: 'integer' } } });
+
+		assert.strictEqual(v.validate(), false);
+		assert.deepStrictEqual(v.errors, ['The a.b.c field must be an integer.']);
+	});
+
+	it('escapes literal dots in keys', () => {
+		const v = new Validator({ 'a.b': 'x' }, { 'a\\.b': 'integer', 'a.b': 'required' });
+
+		assert.strictEqual(v.validate(), false);
+		assert.deepStrictEqual(v.errors, ['The a.b field must be an integer.', 'The a.b field is required.']);
+	});
+
+	it('resolves asterisks in dependent rule parameters', () => {
+		const v = new Validator({ items: [{ type: 'car', wheels: 4 }, { type: 'boat' }] }, {
+			'items.*.wheels': 'required_if:items.*.type,car',
+		});
+
+		assert.strictEqual(v.validate(), true);
+	});
+});
+
+describe('Implicit and optional rules', () => {
+	it('skips non-implicit rules for missing or empty values', () => {
+		assert.strictEqual(new Validator({}, { x: 'string|min:5' }).validate(), true);
+		assert.strictEqual(new Validator({ x: '' }, { x: 'integer' }).validate(), true);
+		assert.strictEqual(new Validator({ x: null }, { x: 'integer' }).validate(), false);
+		assert.strictEqual(new Validator({ x: null }, { x: 'nullable|integer' }).validate(), true);
+		assert.strictEqual(new Validator({}, { x: 'sometimes|required' }).validate(), true);
+		assert.strictEqual(new Validator({ x: '' }, { x: 'sometimes|required' }).validate(), false);
+	});
+
+	it('stops after a failed implicit rule and honours bail', () => {
+		const v = new Validator({ x: '' }, { x: 'required|string|min:3' });
+		v.validate();
+		assert.deepStrictEqual(v.errors, ['The x field is required.']);
+
+		const bailed = new Validator({ x: 5 }, { x: 'bail|string|min:3' });
+		bailed.validate();
+		assert.deepStrictEqual(bailed.errors, ['The x field must be a string.']);
+
+		const unbailed = new Validator({ x: 5 }, { x: 'string|min:3' });
+		unbailed.validate();
+		assert.strictEqual(unbailed.errors.length, 2);
+	});
+
+	it('stopOnFirstFailure halts after the first failing attribute', () => {
+		const v = new Validator({}, { a: 'required', b: 'required' }).stopOnFirstFailure();
+
+		assert.strictEqual(v.validate(), false);
+		assert.deepStrictEqual(Object.keys(v.messages), ['a']);
+	});
+});
+
+describe('validated(), exclude rules and sometimes()', () => {
+	it('returns only validated data and honours exclude rules', () => {
+		const v = new Validator({ name: 'x', secret: 'y', extra: 'z', tags: ['a', 'b'], meta: { keep: 1, drop: 2 } }, {
+			name: 'required',
+			secret: 'exclude',
+			tags: 'array',
+			'tags.*': 'string',
+			'meta.keep': 'integer',
+		});
+
+		assert.deepStrictEqual(v.validated(), { name: 'x', tags: ['a', 'b'], meta: { keep: 1 } });
+	});
+
+	it('throws a ValidationError when data is invalid', () => {
+		const v = new Validator({}, { name: 'required' });
+
+		assert.throws(() => v.validated(), (e: any) => e instanceof Validator.ValidationError && e.errors.name[0] === 'The name field is required.');
+	});
+
+	it('adds conditional rules through sometimes()', () => {
+		const v = new Validator({ games: 100 }, { games: 'integer' })
+			.sometimes('reason', 'required', input => input.games >= 100);
+
+		assert.strictEqual(v.validate(), false);
+		assert.deepStrictEqual(v.errors, ['The reason field is required.']);
+	});
+
+	it('runs after() hooks', () => {
+		const v = new Validator({ a: 1 }, { a: 'integer' }).after(validator => validator.addFailure('a', 'required'));
+
+		assert.strictEqual(v.validate(), false);
+		assert.deepStrictEqual(v.errors, ['The a field is required.']);
+	});
+});
+
+describe('Closures and extensions', () => {
+	it('runs closure rules', () => {
+		const v = new Validator({ title: 'foo' }, {
+			title: [(attribute, value, fail) => { if (value === 'foo') fail(`The ${attribute} may not be foo.`); }],
+		});
+
+		assert.strictEqual(v.validate(), false);
+		assert.deepStrictEqual(v.errors, ['The title may not be foo.']);
+	});
+
+	it('supports Validator.extend() with messages and replacers', () => {
+		Validator.extend('even', (_attribute, value) => Number(value) % 2 === 0, 'The :attribute field must be :kind.');
+		Validator.replacer('even', message => message.replace(':kind', 'even'));
+
+		const v = new Validator({ n: 3 }, { n: 'even' });
+		assert.strictEqual(v.validate(), false);
+		assert.deepStrictEqual(v.errors, ['The n field must be even.']);
+		assert.strictEqual(new Validator({ n: 4 }, { n: 'even' }).validate(), true);
+	});
+
+	it('throws on unknown rules', () => {
+		assert.throws(() => new Validator({ a: 1 }, { a: 'nope' }).validate(), /validateNope does not exist/);
+	});
+});
+
+describe('Dates', () => {
+	it('understands the formats strtotime accepts', () => {
+		for (const value of ['2017-10-04', '10/04/2017', '4 October 2017', 'October 4, 2017', '20171004', '2017-10-04 12:30', '2017-10-04T12:30:00Z'])
+			assert.strictEqual(new Validator({ d: value }, { d: 'date' }).validate(), true, value);
+		for (const value of ['2017-02-30', 'tomorrow', '2017', 'Wednesday the 4th of October, 2017', 12345, [], {}])
+			assert.strictEqual(new Validator({ d: value }, { d: 'date' }).validate(), false, String(value));
+	});
+
+	it('compares relative dates and other fields', () => {
+		assert.strictEqual(new Validator({ d: '+1 day' }, { d: 'after:now' }).validate(), true);
+		assert.strictEqual(new Validator({ d: new Date('2000-01-01') }, { d: 'before:tomorrow|after:1999-12-31' }).validate(), true);
+		assert.strictEqual(new Validator({ d: '2000-01-01', e: '2000-01-01' }, { d: 'date_equals:e' }).validate(), true);
+		assert.strictEqual(new Validator({ d: '01/02/2000' }, { d: 'date_format:d/m/Y|after_or_equal:01/02/2000' }).validate(), true);
+	});
+});

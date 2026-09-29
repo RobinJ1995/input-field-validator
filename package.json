@@ -13,10 +13,6 @@
       "types": "./dist/Validator.d.ts",
       "default": "./dist/Validator.js"
     },
-    "./FieldValidator": {
-      "types": "./dist/FieldValidator.d.ts",
-      "default": "./dist/FieldValidator.js"
-    },
     "./package.json": "./package.json"
   },
   "files": [
@@ -36,12 +32,8 @@
   },
   "devDependencies": {
     "@types/mocha": "^10.0.10",
-    "@types/uuid": "^8.3.4",
     "mocha": "^11.8.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.9.3"
-  },
-  "dependencies": {
-    "uuid": "^8.3.2"
   }
 }
