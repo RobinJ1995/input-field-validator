@@ -25,7 +25,7 @@ function filterEmail(regex: RegExp, value: string): boolean {
 	return m[1] === undefined || m[1].split('.').every(label => label.length <= 63);
 }
 
-const RFC_LOCAL = /^[^\s@"(),:;<>[\]\\]+(?:\.[^\s@"(),:;<>[\]\\]+)*$/u;
+const RFC_LOCAL = /^[^\s@"(),:;<>[\]\\.]+(?:\.[^\s@"(),:;<>[\]\\.]+)*$/u;
 const RFC_QUOTED_LOCAL = /^"(?:[^"\\\r\n]|\\.)*"$/u;
 const RFC_LABEL = /^[\p{L}\p{N}](?:[\p{L}\p{N}-]*[\p{L}\p{N}])?$/u;
 
