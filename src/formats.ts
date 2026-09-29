@@ -5,17 +5,25 @@ import { ZONES, ZONES_WITH_BC, COUNTRIES } from './timezones';
 const ATOM = String.raw`[\x21\x23-\x27\x2A\x2B\x2D\x2F-\x39\x3D\x3F\x5E-\x7E]`;
 const UNICODE_ATOM = String.raw`[\x21\x23-\x27\x2A\x2B\x2D\x2F-\x39\x3D\x3F\x5E-\x7E\u{80}-\u{10FFFF}]`;
 const QUOTED = String.raw`"(?:[\x01-\x08\x0B\x0C\x0E-\x1F\x21\x23-\x5B\x5D-\x7F]|\\[\x00-\x7F])*"`;
-const HOSTNAME = String.raw`(?!.*[^.]{64,})(?:(?:(?:xn--)?[a-z0-9]+(?:-+[a-z0-9]+)*\.){1,126}){1,}(?:(?:[a-z][a-z0-9]*)|(?:(?:xn--)[a-z0-9]+))(?:-+[a-z0-9]+)*`;
+const HOSTNAME = String.raw`(?:[a-z0-9]+(?:-+[a-z0-9]+)*\.)+[a-z][a-z0-9]*(?:-+[a-z0-9]+)*`;
 const IPV4 = String.raw`(?:(?:25[0-5])|(?:2[0-4][0-9])|(?:1[0-9]{2})|(?:[1-9]?[0-9]))(?:\.(?:(?:25[0-5])|(?:2[0-4][0-9])|(?:1[0-9]{2})|(?:[1-9]?[0-9]))){3}`;
-const EMAIL_LITERAL = String.raw`\[(?:(?:IPv6:(?:(?:[a-f0-9]{1,4}(?::[a-f0-9]{1,4}){7})|(?:(?!(?:.*[a-f0-9][:\]]){7,})(?:[a-f0-9]{1,4}(?::[a-f0-9]{1,4}){0,5})?::(?:[a-f0-9]{1,4}(?::[a-f0-9]{1,4}){0,5})?)))|(?:(?:IPv6:(?:(?:[a-f0-9]{1,4}(?::[a-f0-9]{1,4}){5}:)|(?:(?!(?:.*[a-f0-9]:){5,})(?:[a-f0-9]{1,4}(?::[a-f0-9]{1,4}){0,3})?::(?:[a-f0-9]{1,4}(?::[a-f0-9]{1,4}){0,3}:)?)))?${IPV4}))\]`;
+const IPV6_BODY = String.raw`(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|::(ffff(:0{1,4})?:)?((25[0-5]|(2[0-4]|1?[0-9])?[0-9])\.){3}(25[0-5]|(2[0-4]|1?[0-9])?[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1?[0-9])?[0-9])\.){3}(25[0-5]|(2[0-4]|1?[0-9])?[0-9]))`;
+const EMAIL_LITERAL = String.raw`\[(?:IPv6:${IPV6_BODY}|${IPV4})\]`;
 
-// PHP's FILTER_VALIDATE_EMAIL regex, with an optional unicode local part.
+// PHP's FILTER_VALIDATE_EMAIL regex, with its length lookaheads moved into filterEmail().
 const filterEmailRegex = (atom: string, flags: string) => new RegExp(
-	String.raw`^(?!(?:(?:\x22?\x5C[\x00-\x7E]\x22?)|(?:\x22?[^\x5C\x22]\x22?)){255,})(?!(?:(?:\x22?\x5C[\x00-\x7E]\x22?)|(?:\x22?[^\x5C\x22]\x22?)){65,}@)(?:${atom}+|${QUOTED})(?:\.(?:${atom}+|${QUOTED}))*@(?:${HOSTNAME}|${EMAIL_LITERAL})$`,
+	String.raw`^(?:${atom}+|${QUOTED})(?:\.(?:${atom}+|${QUOTED}))*@(?:(${HOSTNAME})|${EMAIL_LITERAL})$`,
 	flags,
 );
 const FILTER_EMAIL = filterEmailRegex(ATOM, 'i');
 const FILTER_EMAIL_UNICODE = filterEmailRegex(UNICODE_ATOM, 'iu');
+
+function filterEmail(regex: RegExp, value: string): boolean {
+	const m = regex.exec(value);
+	if (!m || value.length > 254 || value.lastIndexOf('@') > 64) return false;
+
+	return m[1] === undefined || m[1].split('.').every(label => label.length <= 63);
+}
 
 const RFC_LOCAL = /^[^\s@"(),:;<>[\]\\]+(?:\.[^\s@"(),:;<>[\]\\]+)*$/u;
 const RFC_QUOTED_LOCAL = /^"(?:[^"\\\r\n]|\\.)*"$/u;
@@ -64,8 +72,8 @@ export function isEmail(value: string, options: string[]): boolean {
 
 				return result.valid && !result.warnings;
 			}
-			case 'filter': return FILTER_EMAIL.test(value);
-			case 'filter_unicode': return FILTER_EMAIL_UNICODE.test(value);
+			case 'filter': return filterEmail(FILTER_EMAIL, value);
+			case 'filter_unicode': return filterEmail(FILTER_EMAIL_UNICODE, value);
 			case 'dns':
 			case 'spoof':
 				throw new Error(`The email:${check} check is not supported.`);
@@ -113,7 +121,7 @@ export const isUlid = (value: string): boolean => /^[0-7][0-9A-HJKMNP-TV-Z]{25}$
 
 export const isIpv4 = (value: string): boolean => new RegExp(`^${IPV4}$`).test(value);
 
-const IPV6 = /^(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,7}:|([0-9a-fA-F]{1,4}:){1,6}:[0-9a-fA-F]{1,4}|([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}|([0-9a-fA-F]{1,4}:){1,4}(:[0-9a-fA-F]{1,4}){1,3}|([0-9a-fA-F]{1,4}:){1,3}(:[0-9a-fA-F]{1,4}){1,4}|([0-9a-fA-F]{1,4}:){1,2}(:[0-9a-fA-F]{1,4}){1,5}|[0-9a-fA-F]{1,4}:((:[0-9a-fA-F]{1,4}){1,6})|:((:[0-9a-fA-F]{1,4}){1,7}|:)|::(ffff(:0{1,4})?:)?((25[0-5]|(2[0-4]|1?[0-9])?[0-9])\.){3}(25[0-5]|(2[0-4]|1?[0-9])?[0-9])|([0-9a-fA-F]{1,4}:){1,4}:((25[0-5]|(2[0-4]|1?[0-9])?[0-9])\.){3}(25[0-5]|(2[0-4]|1?[0-9])?[0-9]))$/;
+const IPV6 = new RegExp(`^${IPV6_BODY}$`);
 
 export const isIpv6 = (value: string): boolean => IPV6.test(value);
 
